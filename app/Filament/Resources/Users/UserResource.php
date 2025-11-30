@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Users;
 use App\Filament\Resources\Users\Pages\CreateUser;
 use App\Filament\Resources\Users\Pages\EditUser;
 use App\Filament\Resources\Users\Pages\ListUsers;
+use App\Filament\Resources\Users\RelationManagers\EnrollmentsRelationManager;
 use App\Filament\Resources\Users\Schemas\UserForm;
 use App\Filament\Resources\Users\Tables\UsersTable;
 use App\Models\User;
@@ -35,7 +36,7 @@ class UserResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            EnrollmentsRelationManager::class,
         ];
     }
 
