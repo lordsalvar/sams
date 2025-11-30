@@ -11,13 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('q_r_s', function (Blueprint $table) {
+        Schema::create('qr_codes', function (Blueprint $table) {
             $table->id();
             $table->foreignId('course_id')
-                ->constrained('courses')
-                ->cascadeOnDelete();
-            $table->dateTime('session_datetime');
-            $table->string('token')->unique();
+                  ->constrained('courses')
+                  ->cascadeOnDelete();
+                  $table->dateTime('session_datetime');
+                  $table->string('token')->unique();
+                  $table->dateTime('expires_at')->nullable();
             $table->timestamps();
         });
     }
@@ -27,6 +28,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('q_r_s');
+        Schema::dropIfExists('qr_codes');
     }
 };

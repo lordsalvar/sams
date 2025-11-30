@@ -17,7 +17,7 @@ return new class extends Migration
                 ->constrained('enrollments')
                 ->cascadeOnDelete();
             $table->foreignId('qr_code_id')
-                ->constrained('q_r_s')
+                ->constrained('qr_codes')
                 ->cascadeOnDelete();
             $table->dateTime('scanned_at');
             $table->string('scan_source')->nullable();

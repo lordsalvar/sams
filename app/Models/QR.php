@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class QR extends Model
 {
+    protected $table = 'qr_codes';
+
     protected $fillable = [
         'course_id',
         'session_datetime',
