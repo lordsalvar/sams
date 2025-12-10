@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import axios from 'axios'
-import { ArrowLeft, User, Mail, BookOpen, Users, UserMinus, UserPlus, Pencil, Trash2 } from 'lucide-react'
+import { ArrowLeft, User, Mail, BookOpen, Users, UserMinus, UserPlus, Pencil, Trash2, Check, ChevronsUpDown } from 'lucide-react'
 import { DashboardLayout } from '../components/DashboardLayout'
 import { Button } from '../components/ui/button'
 import {
@@ -20,6 +20,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../components/ui/dialog'
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '../components/ui/command'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '../components/ui/popover'
 import { Input } from '../components/ui/input'
 import { Label } from '../components/ui/label'
 import {
@@ -31,6 +44,7 @@ import {
 } from '../components/ui/select'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { Badge } from '../components/ui/badge'
+import { cn } from '../lib/utils'
 
 interface CourseDetail {
   id: number
@@ -56,6 +70,12 @@ interface Instructor {
   email: string
 }
 
+interface Student {
+  id: number
+  name: string
+  email: string
+}
+
 const api = axios.create({ baseURL: '/api' })
 
 export default function CourseDetail() {
@@ -67,8 +87,12 @@ export default function CourseDetail() {
   const [loading, setLoading] = useState(true)
   const [enrollDialogOpen, setEnrollDialogOpen] = useState(false)
   const [enrollEmail, setEnrollEmail] = useState('')
+  const [studentComboOpen, setStudentComboOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [instructors, setInstructors] = useState<Instructor[]>([])
+  const [availableStudents, setAvailableStudents] = useState<Student[]>([])
+  const [allStudentsCount, setAllStudentsCount] = useState(0)
+  const [loadingStudents, setLoadingStudents] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
     code: '',
@@ -129,6 +153,28 @@ export default function CourseDetail() {
     }
   }
 
+  const loadAvailableStudents = async () => {
+    if (!user) return
+    setLoadingStudents(true)
+    try {
+      const res = await api.get('/courses', {
+        params: { list: 'students', requested_by_role: user.role },
+      })
+      if (res.data?.success) {
+        const allStudents = res.data.data ?? []
+        setAllStudentsCount(allStudents.length)
+        // Filter out students who are already enrolled in this course
+        const enrolledEmails = new Set(students.map(s => s.student_email))
+        const availableOnly = allStudents.filter((student: Student) => !enrolledEmails.has(student.email))
+        setAvailableStudents(availableOnly)
+      }
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoadingStudents(false)
+    }
+  }
+
   const handleEditCourse = async () => {
     if (!course) return
     await loadInstructors()
@@ -172,9 +218,15 @@ export default function CourseDetail() {
     }
   }
 
+  const handleOpenEnrollDialog = async () => {
+    await loadAvailableStudents()
+    setEnrollEmail('')
+    setEnrollDialogOpen(true)
+  }
+
   const handleEnrollStudent = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!course || !user) return
+    if (!course || !user || !enrollEmail) return
     
     try {
       await api.post('/courses/enroll', {
@@ -255,10 +307,7 @@ export default function CourseDetail() {
               <div className="flex gap-2">
                 <Button
                   variant="outline"
-                  onClick={() => {
-                    setEnrollEmail('')
-                    setEnrollDialogOpen(true)
-                  }}
+                  onClick={handleOpenEnrollDialog}
                 >
                   <UserPlus className="mr-2 h-4 w-4" />
                   Enroll Student
@@ -366,10 +415,7 @@ export default function CourseDetail() {
                       <Button
                         variant="outline"
                         className="mt-4"
-                        onClick={() => {
-                          setEnrollEmail('')
-                          setEnrollDialogOpen(true)
-                        }}
+                        onClick={handleOpenEnrollDialog}
                       >
                         <UserPlus className="mr-2 h-4 w-4" />
                         Enroll First Student
@@ -504,26 +550,77 @@ export default function CourseDetail() {
           <DialogHeader>
             <DialogTitle>Enroll Student</DialogTitle>
             <DialogDescription>
-              Add a student to {course?.name || 'this course'}.
+              Select a student to enroll in {course?.name || 'this course'}.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleEnrollStudent} className="space-y-4">
             <div className="grid gap-2">
-              <Label htmlFor="student_email">Student Email</Label>
-              <Input
-                id="student_email"
-                type="email"
-                value={enrollEmail}
-                onChange={(e) => setEnrollEmail(e.target.value)}
-                placeholder="student@example.com"
-                required
-              />
+              <Label>Select Student</Label>
+              {loadingStudents ? (
+                <div className="text-sm text-muted-foreground py-2">Loading students...</div>
+              ) : availableStudents.length === 0 ? (
+                <div className="text-sm text-muted-foreground py-2">
+                  {allStudentsCount === 0 
+                    ? 'No students found. Please create student users first.'
+                    : 'All students are already enrolled in this course.'}
+                </div>
+              ) : (
+                <Popover open={studentComboOpen} onOpenChange={setStudentComboOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={studentComboOpen}
+                      className="w-full justify-between"
+                    >
+                      {enrollEmail
+                        ? availableStudents.find((student) => student.email === enrollEmail)?.name + 
+                          " (" + availableStudents.find((student) => student.email === enrollEmail)?.email + ")"
+                        : "Search and select a student..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[380px] p-0">
+                    <Command>
+                      <CommandInput placeholder="Search students by name or email..." />
+                      <CommandList>
+                        <CommandEmpty>No student found.</CommandEmpty>
+                        <CommandGroup>
+                          {availableStudents.map((student) => (
+                            <CommandItem
+                              key={student.id}
+                              value={`${student.name} ${student.email}`}
+                              onSelect={() => {
+                                setEnrollEmail(student.email)
+                                setStudentComboOpen(false)
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  enrollEmail === student.email ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              <div className="flex flex-col">
+                                <span className="font-medium">{student.name}</span>
+                                <span className="text-sm text-muted-foreground">{student.email}</span>
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              )}
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setEnrollDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit">Enroll Student</Button>
+              <Button type="submit" disabled={!enrollEmail || loadingStudents || availableStudents.length === 0}>
+                Enroll Student
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>

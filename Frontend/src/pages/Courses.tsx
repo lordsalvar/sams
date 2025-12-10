@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
-import { Plus, MoreHorizontal, Pencil, Trash2, BookOpen, User, UserPlus, Eye } from 'lucide-react'
+import { Plus, MoreHorizontal, Pencil, Trash2, BookOpen, User, UserPlus, Eye, Check, ChevronsUpDown } from 'lucide-react'
 import { DashboardLayout } from '../components/DashboardLayout'
 import { Button } from '../components/ui/button'
 import {
@@ -21,6 +21,19 @@ import {
   DialogTitle,
 } from '../components/ui/dialog'
 import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '../components/ui/command'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '../components/ui/popover'
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -39,6 +52,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../components/ui/select'
+import { cn } from '../lib/utils'
 
 interface Course {
   id: number
@@ -49,6 +63,12 @@ interface Course {
 }
 
 interface Instructor {
+  id: number
+  name: string
+  email: string
+}
+
+interface Student {
   id: number
   name: string
   email: string
@@ -72,6 +92,10 @@ export default function Courses() {
   const [enrollDialogOpen, setEnrollDialogOpen] = useState(false)
   const [enrollCourse, setEnrollCourse] = useState<Course | null>(null)
   const [enrollEmail, setEnrollEmail] = useState('')
+  const [studentComboOpen, setStudentComboOpen] = useState(false)
+  const [availableStudents, setAvailableStudents] = useState<Student[]>([])
+  const [allStudentsCount, setAllStudentsCount] = useState(0)
+  const [loadingStudents, setLoadingStudents] = useState(false)
 
   useEffect(() => {
     const userStr = localStorage.getItem('user')
@@ -124,6 +148,39 @@ export default function Courses() {
     } catch (err) {
       console.error(err)
       alert('Failed to load instructors')
+    }
+  }
+
+  const loadAvailableStudents = async () => {
+    if (!user || !enrollCourse) return
+    setLoadingStudents(true)
+    try {
+      const res = await api.get('/courses', {
+        params: { list: 'students', requested_by_role: user.role },
+      })
+      if (res.data?.success) {
+        const allStudents = res.data.data ?? []
+        setAllStudentsCount(allStudents.length)
+        
+        // Get currently enrolled students for this specific course
+        const courseDetailRes = await api.get('/courses', {
+          params: { id: enrollCourse.id }
+        })
+        
+        if (courseDetailRes.data?.success) {
+          const enrolledEmails = new Set(
+            (courseDetailRes.data.data.students || []).map((s: any) => s.student_email)
+          )
+          const availableOnly = allStudents.filter((student: Student) => !enrolledEmails.has(student.email))
+          setAvailableStudents(availableOnly)
+        } else {
+          setAvailableStudents(allStudents)
+        }
+      }
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoadingStudents(false)
     }
   }
 
@@ -324,10 +381,11 @@ export default function Courses() {
                                 Edit
                               </DropdownMenuItem>
                               <DropdownMenuItem
-                                onClick={() => {
+                                onClick={async () => {
                                   setEnrollCourse(course)
-                                  setEnrollDialogOpen(true)
                                   setEnrollEmail('')
+                                  await loadAvailableStudents()
+                                  setEnrollDialogOpen(true)
                                 }}
                               >
                                 <UserPlus className="mr-2 h-4 w-4" />
@@ -425,27 +483,79 @@ export default function Courses() {
       <Dialog open={enrollDialogOpen} onOpenChange={setEnrollDialogOpen}>
         <DialogContent className="sm:max-w-[420px]">
           <DialogHeader>
-            <DialogTitle>Enroll student</DialogTitle>
+            <DialogTitle>Enroll Student</DialogTitle>
             <DialogDescription>
-              Add a student to {enrollCourse ? enrollCourse.name : 'this course'}.
+              Select a student to enroll in {enrollCourse ? enrollCourse.name : 'this course'}.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleEnroll} className="space-y-4">
             <div className="grid gap-2">
-              <Label htmlFor="student_email">Student Email</Label>
-              <Input
-                id="student_email"
-                type="email"
-                value={enrollEmail}
-                onChange={(e) => setEnrollEmail(e.target.value)}
-                required
-              />
+              <Label>Select Student</Label>
+              {loadingStudents ? (
+                <div className="text-sm text-muted-foreground py-2">Loading students...</div>
+              ) : availableStudents.length === 0 ? (
+                <div className="text-sm text-muted-foreground py-2">
+                  {allStudentsCount === 0 
+                    ? 'No students found. Please create student users first.'
+                    : 'All students are already enrolled in this course.'}
+                </div>
+              ) : (
+                <Popover open={studentComboOpen} onOpenChange={setStudentComboOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={studentComboOpen}
+                      className="w-full justify-between"
+                    >
+                      {enrollEmail
+                        ? availableStudents.find((student) => student.email === enrollEmail)?.name + 
+                          " (" + availableStudents.find((student) => student.email === enrollEmail)?.email + ")"
+                        : "Search and select a student..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[380px] p-0">
+                    <Command>
+                      <CommandInput placeholder="Search students by name or email..." />
+                      <CommandList>
+                        <CommandEmpty>No student found.</CommandEmpty>
+                        <CommandGroup>
+                          {availableStudents.map((student) => (
+                            <CommandItem
+                              key={student.id}
+                              value={`${student.name} ${student.email}`}
+                              onSelect={() => {
+                                setEnrollEmail(student.email)
+                                setStudentComboOpen(false)
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  enrollEmail === student.email ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              <div className="flex flex-col">
+                                <span className="font-medium">{student.name}</span>
+                                <span className="text-sm text-muted-foreground">{student.email}</span>
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              )}
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setEnrollDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit">Enroll</Button>
+              <Button type="submit" disabled={!enrollEmail || loadingStudents || availableStudents.length === 0}>
+                Enroll Student
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>

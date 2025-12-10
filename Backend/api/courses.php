@@ -41,10 +41,12 @@ function requireRole(array $allowed, $body)
 }
 
 // Detect enroll action (mapped from /courses/enroll route)
-$isEnroll = strpos($_SERVER['REQUEST_URI'], '/courses/enroll') !== false || strpos($_SERVER['REQUEST_URI'], '/courses/enroll.php') !== false;
+$isEnroll = strpos($_SERVER['REQUEST_URI'], '/courses/enroll') !== false 
+    || strpos($_SERVER['REQUEST_URI'], '/courses.php/enroll') !== false;
 
 // Detect unenroll action (mapped from /courses/unenroll route)
-$isUnenroll = strpos($_SERVER['REQUEST_URI'], '/courses/unenroll') !== false || strpos($_SERVER['REQUEST_URI'], '/courses/unenroll.php') !== false;
+$isUnenroll = strpos($_SERVER['REQUEST_URI'], '/courses/unenroll') !== false 
+    || strpos($_SERVER['REQUEST_URI'], '/courses.php/unenroll') !== false;
 
 // Detect instructor directory via path or query
 parse_str(parse_url($_SERVER['REQUEST_URI'], PHP_URL_QUERY) ?? '', $queryParams);
@@ -52,6 +54,12 @@ $isInstructorList = strpos($_SERVER['REQUEST_URI'], '/courses/instructors') !== 
     || strpos($_SERVER['REQUEST_URI'], '/courses/instructors.php') !== false
     || isset($queryParams['instructors'])
     || (isset($queryParams['list']) && strtolower((string)$queryParams['list']) === 'instructors');
+
+// Detect students list via path or query
+$isStudentsList = strpos($_SERVER['REQUEST_URI'], '/courses/students') !== false
+    || strpos($_SERVER['REQUEST_URI'], '/courses/students.php') !== false
+    || isset($queryParams['students'])
+    || (isset($queryParams['list']) && strtolower((string)$queryParams['list']) === 'students');
 
 $method = $_SERVER['REQUEST_METHOD'];
 $body = getRequestBody();
@@ -150,6 +158,24 @@ if ($isInstructorList) {
     requireRole(['admin', 'instructor'], $body);
 
     $stmt = $conn->prepare("SELECT id, name, email FROM users WHERE role = 'instructor' ORDER BY name ASC");
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $rows = [];
+    while ($row = $result->fetch_assoc()) {
+        $rows[] = $row;
+    }
+    $stmt->close();
+    sendResponse(['success' => true, 'data' => $rows]);
+}
+
+if ($isStudentsList) {
+    if ($method !== 'GET') {
+        sendResponse(['success' => false, 'message' => 'Method not allowed'], 405);
+    }
+    // Only admins/instructors can request the students list (for enrollment)
+    requireRole(['admin', 'instructor'], $body);
+
+    $stmt = $conn->prepare("SELECT id, name, email FROM users WHERE role = 'student' ORDER BY name ASC");
     $stmt->execute();
     $result = $stmt->get_result();
     $rows = [];
