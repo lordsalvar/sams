@@ -5,7 +5,7 @@ import QRCode from 'qrcode.react'
 import { DashboardLayout } from '../components/DashboardLayout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button'
-import { Loader2, QrCode, RefreshCw, Copy, AlertTriangle } from 'lucide-react'
+import { Loader2, QrCode, RefreshCw, AlertTriangle } from 'lucide-react'
 
 const api = axios.create({ baseURL: '/api' })
 
@@ -15,6 +15,15 @@ interface Session {
   course_id: number
   course_name?: string
   is_expired?: number
+  id?: number
+}
+
+interface AttendanceLog {
+  id: number
+  student_id: number
+  student_name: string
+  student_email: string
+  scanned_at: string
 }
 
 export default function AttendanceDisplay() {
@@ -25,6 +34,8 @@ export default function AttendanceDisplay() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [creating, setCreating] = useState(false)
+  const [logs, setLogs] = useState<AttendanceLog[]>([])
+  const [logsLoading, setLogsLoading] = useState(false)
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user')
@@ -61,8 +72,10 @@ export default function AttendanceDisplay() {
       })
       if (res.data?.success && res.data.data) {
         setSession(res.data.data)
+        await loadLogs(res.data.data.token, res.data.data.id)
       } else {
         setSession(null)
+        setLogs([])
       }
     } catch (err: any) {
       console.error(err)
@@ -84,6 +97,7 @@ export default function AttendanceDisplay() {
       })
       if (res.data?.success && res.data.data) {
         setSession(res.data.data)
+        await loadLogs(res.data.data.token, res.data.data.id)
       } else {
         setError(res.data?.message || 'Failed to create attendance session')
       }
@@ -92,6 +106,28 @@ export default function AttendanceDisplay() {
       setError(err?.response?.data?.message || 'Failed to create attendance session')
     } finally {
       setCreating(false)
+    }
+  }
+
+  const loadLogs = async (token?: string, sessionId?: number) => {
+    if (!user) return
+    if (!token && !sessionId) return
+    setLogsLoading(true)
+    try {
+      const res = await api.get('/courses/attendance-logs', {
+        params: {
+          requested_by_role: user.role,
+          token,
+          session_id: sessionId,
+        }
+      })
+      if (res.data?.success) {
+        setLogs(res.data.data?.logs || [])
+      }
+    } catch (err) {
+      console.error('Failed to load attendance logs', err)
+    } finally {
+      setLogsLoading(false)
     }
   }
 
@@ -161,6 +197,43 @@ export default function AttendanceDisplay() {
                     <div className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-destructive text-sm">
                       <AlertTriangle className="h-4 w-4" />
                       Session expired. Generate a new QR.
+                    </div>
+                  )}
+                </div>
+                <div className="w-full border-t pt-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="font-medium">
+                      Attendance log {logsLoading ? '(loading...)' : `(${logs.length})`}
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => loadLogs(session.token, session.id)} disabled={logsLoading}>
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      Refresh log
+                    </Button>
+                  </div>
+                  {logs.length === 0 ? (
+                    <div className="text-sm text-muted-foreground">No scans recorded yet for this session.</div>
+                  ) : (
+                    <div className="w-full overflow-auto">
+                      <table className="w-full text-sm">
+                        <thead className="text-left text-muted-foreground">
+                          <tr>
+                            <th className="py-2 pr-4">Student</th>
+                            <th className="py-2 pr-4">Email</th>
+                            <th className="py-2 pr-4">Scanned At</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {logs.map((log) => (
+                            <tr key={log.id} className="border-t border-border">
+                              <td className="py-2 pr-4">{log.student_name}</td>
+                              <td className="py-2 pr-4">{log.student_email}</td>
+                              <td className="py-2 pr-4">
+                                {new Date(log.scanned_at).toLocaleString()}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
                   )}
                 </div>

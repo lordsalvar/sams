@@ -63,9 +63,21 @@ $isUnenroll = strpos($_SERVER['REQUEST_URI'], '/courses/unenroll') !== false
 $isAttendanceSession = strpos($_SERVER['REQUEST_URI'], '/courses/attendance-session') !== false
     || strpos($_SERVER['REQUEST_URI'], '/courses.php/attendance-session') !== false;
 
+// Attendance sessions list per course
+$isAttendanceSessionsList = strpos($_SERVER['REQUEST_URI'], '/courses/attendance-sessions') !== false
+    || strpos($_SERVER['REQUEST_URI'], '/courses.php/attendance-sessions') !== false;
+
+// Attendance analytics per course
+$isAttendanceAnalytics = strpos($_SERVER['REQUEST_URI'], '/courses/attendance-analytics') !== false
+    || strpos($_SERVER['REQUEST_URI'], '/courses.php/attendance-analytics') !== false;
+
 // Attendance scan (student)
 $isAttendanceScan = strpos($_SERVER['REQUEST_URI'], '/courses/attendance-scan') !== false
     || strpos($_SERVER['REQUEST_URI'], '/courses.php/attendance-scan') !== false;
+
+// Attendance logs for a session
+$isAttendanceLogs = strpos($_SERVER['REQUEST_URI'], '/courses/attendance-logs') !== false
+    || strpos($_SERVER['REQUEST_URI'], '/courses.php/attendance-logs') !== false;
 
 // Detect instructor directory via path or query
 parse_str(parse_url($_SERVER['REQUEST_URI'], PHP_URL_QUERY) ?? '', $queryParams);
@@ -156,6 +168,203 @@ if ($isAttendanceSession) {
         'course_name' => $courseRow['name'],
         'token' => $token,
         'expires_at' => $expiresAt,
+    ]]);
+}
+
+if ($isAttendanceSessionsList) {
+    if ($method !== 'GET') {
+        sendResponse(['success' => false, 'message' => 'Method not allowed'], 405);
+    }
+    requireRole(['admin', 'instructor'], $body);
+
+    parse_str(parse_url($_SERVER['REQUEST_URI'], PHP_URL_QUERY) ?? '', $query);
+    $courseId = isset($query['course_id']) ? (int)$query['course_id'] : 0;
+    if (!$courseId) {
+        sendResponse(['success' => false, 'message' => 'course_id is required'], 400);
+    }
+
+    $stmt = $conn->prepare("
+        SELECT s.id, s.course_id, s.token, s.expires_at, s.created_by_email, s.created_at,
+               c.name AS course_name,
+               (s.expires_at <= NOW()) AS is_expired,
+               (SELECT COUNT(*) FROM attendance_logs al WHERE al.session_id = s.id) AS scanned_count,
+               (SELECT COUNT(*) FROM enrollments e WHERE e.course_id = s.course_id) AS enrolled_count
+        FROM attendance_sessions s
+        JOIN courses c ON c.id = s.course_id
+        WHERE s.course_id = ?
+        ORDER BY s.id DESC
+    ");
+    $stmt->bind_param("i", $courseId);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $rows = [];
+    while ($row = $result->fetch_assoc()) {
+        $rows[] = $row;
+    }
+    $stmt->close();
+
+    sendResponse(['success' => true, 'data' => $rows]);
+}
+
+if ($isAttendanceAnalytics) {
+    if ($method !== 'GET') {
+        sendResponse(['success' => false, 'message' => 'Method not allowed'], 405);
+    }
+    requireRole(['admin', 'instructor'], $body);
+
+    parse_str(parse_url($_SERVER['REQUEST_URI'], PHP_URL_QUERY) ?? '', $query);
+    $courseId = isset($query['course_id']) ? (int)$query['course_id'] : 0;
+    if (!$courseId) {
+        sendResponse(['success' => false, 'message' => 'course_id is required'], 400);
+    }
+
+    // Course summary
+    $stmt = $conn->prepare("
+        SELECT 
+            (SELECT COUNT(*) FROM attendance_sessions s WHERE s.course_id = ?) AS sessions_count,
+            (SELECT COUNT(*) FROM attendance_sessions s WHERE s.course_id = ? AND s.expires_at > NOW()) AS active_sessions,
+            (SELECT COUNT(*) FROM enrollments e WHERE e.course_id = ?) AS enrolled_count,
+            (SELECT MAX(created_at) FROM attendance_sessions s WHERE s.course_id = ?) AS last_session_at
+    ");
+    $stmt->bind_param("iiii", $courseId, $courseId, $courseId, $courseId);
+    $stmt->execute();
+    $summaryResult = $stmt->get_result();
+    $summary = $summaryResult->fetch_assoc();
+    $stmt->close();
+
+    // Sessions breakdown
+    $stmt = $conn->prepare("
+        SELECT s.id, s.token, s.created_at, s.expires_at, s.created_by_email,
+               (s.expires_at <= NOW()) AS is_expired,
+               (SELECT COUNT(*) FROM attendance_logs al WHERE al.session_id = s.id) AS scanned_count,
+               (SELECT COUNT(*) FROM enrollments e WHERE e.course_id = s.course_id) AS enrolled_count
+        FROM attendance_sessions s
+        WHERE s.course_id = ?
+        ORDER BY s.id DESC
+    ");
+    $stmt->bind_param("i", $courseId);
+    $stmt->execute();
+    $sessionsResult = $stmt->get_result();
+    $sessions = [];
+    while ($row = $sessionsResult->fetch_assoc()) {
+        $sessions[] = $row;
+    }
+    $stmt->close();
+
+    // Student attendance aggregates
+    $stmt = $conn->prepare("
+        SELECT u.id AS student_id, u.name AS student_name, u.email AS student_email,
+               COUNT(DISTINCT s.id) AS total_sessions,
+               COUNT(DISTINCT al.session_id) AS attended_sessions
+        FROM enrollments e
+        JOIN users u ON u.id = e.student_id
+        LEFT JOIN attendance_sessions s ON s.course_id = e.course_id
+        LEFT JOIN attendance_logs al ON al.session_id = s.id AND al.student_id = e.student_id
+        WHERE e.course_id = ?
+        GROUP BY u.id, u.name, u.email
+        ORDER BY u.name ASC
+    ");
+    $stmt->bind_param("i", $courseId);
+    $stmt->execute();
+    $studentsResult = $stmt->get_result();
+    $students = [];
+    while ($row = $studentsResult->fetch_assoc()) {
+        $students[] = $row;
+    }
+    $stmt->close();
+
+    sendResponse(['success' => true, 'data' => [
+        'summary' => $summary,
+        'sessions' => $sessions,
+        'students' => $students,
+    ]]);
+}
+
+if ($isAttendanceLogs) {
+    if ($method !== 'GET') {
+        sendResponse(['success' => false, 'message' => 'Method not allowed'], 405);
+    }
+    requireRole(['admin', 'instructor'], $body);
+
+    parse_str(parse_url($_SERVER['REQUEST_URI'], PHP_URL_QUERY) ?? '', $query);
+    $token = isset($query['token']) ? trim((string)$query['token']) : '';
+    $sessionId = isset($query['session_id']) ? (int)$query['session_id'] : 0;
+
+    if ($token === '' && !$sessionId) {
+        sendResponse(['success' => false, 'message' => 'token or session_id is required'], 400);
+    }
+
+    // Resolve session
+    if ($token !== '') {
+        $stmt = $conn->prepare("
+            SELECT s.id, s.course_id, s.token, s.expires_at, c.name AS course_name
+            FROM attendance_sessions s
+            JOIN courses c ON c.id = s.course_id
+            WHERE s.token = ?
+        ");
+        $stmt->bind_param("s", $token);
+    } else {
+        $stmt = $conn->prepare("
+            SELECT s.id, s.course_id, s.token, s.expires_at, c.name AS course_name
+            FROM attendance_sessions s
+            JOIN courses c ON c.id = s.course_id
+            WHERE s.id = ?
+        ");
+        $stmt->bind_param("i", $sessionId);
+    }
+    $stmt->execute();
+    $sessionResult = $stmt->get_result();
+    $session = $sessionResult->fetch_assoc();
+    $stmt->close();
+
+    if (!$session) {
+        sendResponse(['success' => false, 'message' => 'Attendance session not found'], 404);
+    }
+
+    // Fetch logs
+    $includeStudents = isset($query['include_students']) ? (int)$query['include_students'] : 0;
+
+    $stmt = $conn->prepare("
+        SELECT al.id, al.scanned_at, u.id AS student_id, u.name AS student_name, u.email AS student_email
+        FROM attendance_logs al
+        JOIN users u ON u.id = al.student_id
+        WHERE al.session_id = ?
+        ORDER BY u.name ASC
+    ");
+    $stmt->bind_param("i", $session['id']);
+    $stmt->execute();
+    $logsResult = $stmt->get_result();
+    $logs = [];
+    while ($row = $logsResult->fetch_assoc()) {
+        $logs[] = $row;
+    }
+    $stmt->close();
+
+    $roster = [];
+    if ($includeStudents) {
+        $stmt = $conn->prepare("
+            SELECT u.id AS student_id, u.name AS student_name, u.email AS student_email,
+                   al.scanned_at,
+                   CASE WHEN al.id IS NULL THEN 0 ELSE 1 END AS present
+            FROM enrollments e
+            JOIN users u ON u.id = e.student_id
+            LEFT JOIN attendance_logs al ON al.session_id = ? AND al.student_id = e.student_id
+            WHERE e.course_id = ?
+            ORDER BY u.name ASC
+        ");
+        $stmt->bind_param("ii", $session['id'], $session['course_id']);
+        $stmt->execute();
+        $rosterResult = $stmt->get_result();
+        while ($row = $rosterResult->fetch_assoc()) {
+            $roster[] = $row;
+        }
+        $stmt->close();
+    }
+
+    sendResponse(['success' => true, 'data' => [
+        'session' => $session,
+        'logs' => $logs,
+        'roster' => $includeStudents ? $roster : null,
     ]]);
 }
 

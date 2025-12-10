@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import axios from 'axios'
-import { ArrowLeft, User, Mail, BookOpen, Users, UserMinus, UserPlus, Pencil, Trash2, Check, ChevronsUpDown, QrCode, Loader2, Copy, Maximize2 } from 'lucide-react'
+import { ArrowLeft, User, Mail, BookOpen, Users, UserMinus, UserPlus, Pencil, Trash2, Check, ChevronsUpDown, QrCode, Loader2, Copy, Maximize2, CalendarClock } from 'lucide-react'
 import { DashboardLayout } from '../components/DashboardLayout'
 import { Button } from '../components/ui/button'
 import {
@@ -539,6 +539,18 @@ export default function CourseDetail() {
                         <Link to={`/dashboard/courses/${course.id}/attendance-display`}>
                           <Maximize2 className="mr-2 h-4 w-4" />
                           Open Fullscreen QR
+                        </Link>
+                      </Button>
+                      <Button asChild variant="ghost" className="mt-1">
+                        <Link to={`/dashboard/courses/${course.id}/attendance-sessions`}>
+                          <CalendarClock className="mr-2 h-4 w-4" />
+                          View Sessions/Logs
+                        </Link>
+                      </Button>
+                      <Button asChild variant="ghost" className="mt-1">
+                        <Link to={`/dashboard/courses/${course.id}/attendance-analytics`}>
+                          <CalendarClock className="mr-2 h-4 w-4" />
+                          Analytics
                         </Link>
                       </Button>
                     </div>

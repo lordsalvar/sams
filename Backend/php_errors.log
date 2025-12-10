@@ -172,3 +172,45 @@
 [10-Dec-2025 15:29:50 Europe/Berlin] Attempting database connection...
 [10-Dec-2025 15:29:50 Europe/Berlin] DB_HOST: localhost, DB_USER: root, DB_NAME: sams_db
 [10-Dec-2025 15:29:50 Europe/Berlin] Database connected successfully
+[10-Dec-2025 15:54:58 Europe/Berlin] Login.php accessed at 2025-12-10 15:54:58
+[10-Dec-2025 15:54:58 Europe/Berlin] Attempting to load config from: C:\xampp\htdocs\sams\Backend\api/config.php
+[10-Dec-2025 22:54:58 Asia/Manila] Config loaded successfully
+[10-Dec-2025 15:54:58 Europe/Berlin] Login.php accessed at 2025-12-10 15:54:58
+[10-Dec-2025 15:54:58 Europe/Berlin] Attempting to load config from: C:\xampp\htdocs\sams\Backend\api/config.php
+[10-Dec-2025 22:54:58 Asia/Manila] Config loaded successfully
+[10-Dec-2025 22:54:58 Asia/Manila] Attempting database connection...
+[10-Dec-2025 22:54:58 Asia/Manila] DB_HOST: localhost, DB_USER: root, DB_NAME: sams_db
+[10-Dec-2025 22:54:58 Asia/Manila] Database connected successfully
+[10-Dec-2025 15:55:03 Europe/Berlin] Login.php accessed at 2025-12-10 15:55:03
+[10-Dec-2025 15:55:03 Europe/Berlin] Attempting to load config from: C:\xampp\htdocs\sams\Backend\api/config.php
+[10-Dec-2025 22:55:03 Asia/Manila] Config loaded successfully
+[10-Dec-2025 22:55:03 Asia/Manila] Attempting database connection...
+[10-Dec-2025 22:55:03 Asia/Manila] DB_HOST: localhost, DB_USER: root, DB_NAME: sams_db
+[10-Dec-2025 22:55:03 Asia/Manila] Database connected successfully
+[10-Dec-2025 15:55:09 Europe/Berlin] Login.php accessed at 2025-12-10 15:55:09
+[10-Dec-2025 15:55:09 Europe/Berlin] Attempting to load config from: C:\xampp\htdocs\sams\Backend\api/config.php
+[10-Dec-2025 22:55:09 Asia/Manila] Config loaded successfully
+[10-Dec-2025 15:55:09 Europe/Berlin] Login.php accessed at 2025-12-10 15:55:09
+[10-Dec-2025 15:55:09 Europe/Berlin] Attempting to load config from: C:\xampp\htdocs\sams\Backend\api/config.php
+[10-Dec-2025 22:55:09 Asia/Manila] Config loaded successfully
+[10-Dec-2025 22:55:09 Asia/Manila] Attempting database connection...
+[10-Dec-2025 22:55:09 Asia/Manila] DB_HOST: localhost, DB_USER: root, DB_NAME: sams_db
+[10-Dec-2025 22:55:09 Asia/Manila] Database connected successfully
+[10-Dec-2025 16:04:02 Europe/Berlin] Login.php accessed at 2025-12-10 16:04:02
+[10-Dec-2025 16:04:02 Europe/Berlin] Attempting to load config from: C:\xampp\htdocs\sams\Backend\api/config.php
+[10-Dec-2025 23:04:02 Asia/Manila] Config loaded successfully
+[10-Dec-2025 16:04:02 Europe/Berlin] Login.php accessed at 2025-12-10 16:04:02
+[10-Dec-2025 16:04:02 Europe/Berlin] Attempting to load config from: C:\xampp\htdocs\sams\Backend\api/config.php
+[10-Dec-2025 23:04:02 Asia/Manila] Config loaded successfully
+[10-Dec-2025 23:04:02 Asia/Manila] Attempting database connection...
+[10-Dec-2025 23:04:02 Asia/Manila] DB_HOST: localhost, DB_USER: root, DB_NAME: sams_db
+[10-Dec-2025 23:04:02 Asia/Manila] Database connected successfully
+[10-Dec-2025 16:08:22 Europe/Berlin] Login.php accessed at 2025-12-10 16:08:22
+[10-Dec-2025 16:08:22 Europe/Berlin] Attempting to load config from: C:\xampp\htdocs\sams\Backend\api/config.php
+[10-Dec-2025 23:08:22 Asia/Manila] Config loaded successfully
+[10-Dec-2025 16:08:22 Europe/Berlin] Login.php accessed at 2025-12-10 16:08:22
+[10-Dec-2025 16:08:22 Europe/Berlin] Attempting to load config from: C:\xampp\htdocs\sams\Backend\api/config.php
+[10-Dec-2025 23:08:22 Asia/Manila] Config loaded successfully
+[10-Dec-2025 23:08:22 Asia/Manila] Attempting database connection...
+[10-Dec-2025 23:08:22 Asia/Manila] DB_HOST: localhost, DB_USER: root, DB_NAME: sams_db
+[10-Dec-2025 23:08:22 Asia/Manila] Database connected successfully
