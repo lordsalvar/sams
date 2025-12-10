@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import axios from 'axios'
 import { Plus, MoreHorizontal, Pencil, Trash2, Shield, User, GraduationCap } from 'lucide-react'
 import { DashboardLayout } from '../components/DashboardLayout'
 import { Button } from '../components/ui/button'
@@ -47,6 +48,8 @@ interface User {
   created_at?: string
 }
 
+const api = axios.create({ baseURL: '/api' })
+
 export default function Users() {
   const navigate = useNavigate()
   const [user, setUser] = useState<{ role: string; name: string } | null>(null)
@@ -78,40 +81,28 @@ export default function Users() {
       return
     }
 
-    // Load users (mock data for now)
-    loadUsers()
+    // Load users - pass userData directly since state might not be updated yet
+    loadUsers(userData.role)
   }, [navigate])
 
-  const loadUsers = async () => {
+  const loadUsers = async (role?: string) => {
     setLoading(true)
-    // TODO: Replace with actual API call
-    // For now, using mock data
-    setTimeout(() => {
-      setUsers([
-        {
-          id: 1,
-          name: 'Admin User',
-          email: 'admin@local.dev',
-          role: 'admin',
-          created_at: '2024-01-01',
-        },
-        {
-          id: 2,
-          name: 'Instructor User',
-          email: 'instructor@local.dev',
-          role: 'instructor',
-          created_at: '2024-01-02',
-        },
-        {
-          id: 3,
-          name: 'Student User',
-          email: 'student@local.dev',
-          role: 'student',
-          created_at: '2024-01-03',
-        },
-      ])
+    try {
+      const userRole = role || user?.role
+      const res = await api.get('/users', {
+        params: { requested_by_role: userRole }
+      })
+      if (res.data?.success) {
+        setUsers(res.data.data ?? [])
+      } else {
+        alert(res.data?.message || 'Failed to load users')
+      }
+    } catch (err) {
+      console.error(err)
+      alert('Failed to load users')
+    } finally {
       setLoading(false)
-    }, 500)
+    }
   }
 
   const handleLogout = () => {
@@ -147,48 +138,64 @@ export default function Users() {
       return
     }
 
-    // TODO: Replace with actual API call
-    setUsers(users.filter((u) => u.id !== userId))
+    try {
+      await api.delete('/users', { params: { id: userId } })
+      await loadUsers()
+    } catch (err: any) {
+      console.error(err)
+      alert(err?.response?.data?.message || 'Failed to delete user')
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!user) return
 
-    // TODO: Replace with actual API call
-    if (editingUser) {
-      // Update user
-      setUsers(
-        users.map((u) =>
-          u.id === editingUser.id
-            ? {
-                ...u,
-                name: formData.name,
-                email: formData.email,
-                role: formData.role,
-              }
-            : u
-        )
-      )
-    } else {
-      // Create user
-      const newUser: User = {
-        id: users.length + 1,
-        name: formData.name,
-        email: formData.email,
-        role: formData.role,
-        created_at: new Date().toISOString().split('T')[0],
-      }
-      setUsers([...users, newUser])
+    // Validate password for new users
+    if (!editingUser && !formData.password) {
+      alert('Password is required for new users')
+      return
     }
 
-    setIsDialogOpen(false)
-    setFormData({
-      name: '',
-      email: '',
-      password: '',
-      role: 'student',
-    })
-    setEditingUser(null)
+    try {
+      if (editingUser) {
+        // Update user
+        const payload: any = {
+          id: editingUser.id,
+          name: formData.name,
+          email: formData.email,
+          role: formData.role,
+          requested_by_role: user.role,
+        }
+        // Only include password if it's not empty
+        if (formData.password) {
+          payload.password = formData.password
+        }
+        await api.put('/users', payload)
+      } else {
+        // Create user
+        await api.post('/users', {
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+          role: formData.role,
+          requested_by_role: user.role,
+        })
+      }
+
+      await loadUsers()
+      setIsDialogOpen(false)
+      setFormData({
+        name: '',
+        email: '',
+        password: '',
+        role: 'student',
+      })
+      setEditingUser(null)
+    } catch (err: any) {
+      console.error(err)
+      alert(err?.response?.data?.message || 'Failed to save user')
+    }
   }
 
   const getRoleIcon = (role: string) => {
@@ -367,7 +374,7 @@ export default function Users() {
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="password">
-                  Password {editingUser && '(leave blank to keep current)'}
+                  Password {editingUser ? '(leave blank to keep current)' : ''}
                 </Label>
                 <Input
                   id="password"

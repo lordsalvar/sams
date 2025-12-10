@@ -52,7 +52,7 @@ const navItems: NavItem[] = [
     title: 'Courses',
     href: '/dashboard/courses',
     icon: BookOpen,
-    roles: ['admin'],
+    roles: ['admin', 'instructor'],
   },
   {
     title: 'Reports',

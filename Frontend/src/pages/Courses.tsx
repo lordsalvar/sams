@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
-import { Plus, MoreHorizontal, Pencil, Trash2, BookOpen, User, UserPlus } from 'lucide-react'
+import { Plus, MoreHorizontal, Pencil, Trash2, BookOpen, User, UserPlus, Eye, Check, ChevronsUpDown } from 'lucide-react'
 import { DashboardLayout } from '../components/DashboardLayout'
 import { Button } from '../components/ui/button'
 import {
@@ -21,6 +21,19 @@ import {
   DialogTitle,
 } from '../components/ui/dialog'
 import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '../components/ui/command'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '../components/ui/popover'
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -39,6 +52,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../components/ui/select'
+import { cn } from '../lib/utils'
 
 interface Course {
   id: number
@@ -49,6 +63,12 @@ interface Course {
 }
 
 interface Instructor {
+  id: number
+  name: string
+  email: string
+}
+
+interface Student {
   id: number
   name: string
   email: string
@@ -72,6 +92,10 @@ export default function Courses() {
   const [enrollDialogOpen, setEnrollDialogOpen] = useState(false)
   const [enrollCourse, setEnrollCourse] = useState<Course | null>(null)
   const [enrollEmail, setEnrollEmail] = useState('')
+  const [studentComboOpen, setStudentComboOpen] = useState(false)
+  const [availableStudents, setAvailableStudents] = useState<Student[]>([])
+  const [allStudentsCount, setAllStudentsCount] = useState(0)
+  const [loadingStudents, setLoadingStudents] = useState(false)
 
   useEffect(() => {
     const userStr = localStorage.getItem('user')
@@ -83,20 +107,36 @@ export default function Courses() {
     const userData = JSON.parse(userStr)
     setUser(userData)
 
-    // Only admins can manage courses
-    if (userData.role.toLowerCase() !== 'admin') {
+    // Only admins and instructors can view courses
+    if (!['admin', 'instructor'].includes(userData.role.toLowerCase())) {
       navigate('/dashboard')
       return
     }
 
-    loadCourses()
-    loadInstructors(userData.role)
+    loadCourses(userData)
+    if (userData.role.toLowerCase() === 'admin') {
+      loadInstructors(userData.role)
+    }
   }, [navigate])
 
-  const loadCourses = async () => {
+  const loadCourses = async (userData?: { role: string; email?: string; name?: string }) => {
     setLoading(true)
     try {
-      const res = await api.get('/courses')
+      // Get userData from parameter or localStorage
+      if (!userData) {
+        const userStr = localStorage.getItem('user')
+        userData = userStr ? JSON.parse(userStr) : null
+      }
+      
+      const params: any = {}
+      
+      // If instructor, filter by their email
+      if (userData?.role.toLowerCase() === 'instructor' && userData?.email) {
+        params.requested_by_role = userData.role
+        params.instructor_email = userData.email
+      }
+      
+      const res = await api.get('/courses', { params })
       if (res.data?.success) {
         setCourses(res.data.data ?? [])
       } else {
@@ -127,14 +167,51 @@ export default function Courses() {
     }
   }
 
+  const loadAvailableStudents = async () => {
+    if (!user || !enrollCourse) return
+    setLoadingStudents(true)
+    try {
+      const res = await api.get('/courses', {
+        params: { list: 'students', requested_by_role: user.role },
+      })
+      if (res.data?.success) {
+        const allStudents = res.data.data ?? []
+        setAllStudentsCount(allStudents.length)
+        
+        // Get currently enrolled students for this specific course
+        const courseDetailRes = await api.get('/courses', {
+          params: { id: enrollCourse.id }
+        })
+        
+        if (courseDetailRes.data?.success) {
+          const enrolledEmails = new Set(
+            (courseDetailRes.data.data.students || []).map((s: any) => s.student_email)
+          )
+          const availableOnly = allStudents.filter((student: Student) => !enrolledEmails.has(student.email))
+          setAvailableStudents(availableOnly)
+        } else {
+          setAvailableStudents(allStudents)
+        }
+      }
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoadingStudents(false)
+    }
+  }
+
   const handleLogout = () => {
     localStorage.removeItem('user')
     localStorage.removeItem('token')
     navigate('/login')
   }
 
-  const handleAddCourse = () => {
+  const handleAddCourse = async () => {
     setEditingCourse(null)
+    // Reload instructors to get the latest list
+    if (user) {
+      await loadInstructors(user.role)
+    }
     setFormData({
       name: '',
       code: '',
@@ -143,8 +220,12 @@ export default function Courses() {
     setIsDialogOpen(true)
   }
 
-  const handleEditCourse = (course: Course) => {
+  const handleEditCourse = async (course: Course) => {
     setEditingCourse(course)
+    // Reload instructors to get the latest list
+    if (user) {
+      await loadInstructors(user.role)
+    }
     setFormData({
       name: course.name,
       code: course.code,
@@ -235,19 +316,33 @@ export default function Courses() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Courses</h1>
-            <p className="text-muted-foreground">Manage courses and assign instructors.</p>
+            <h1 className="text-3xl font-bold tracking-tight">
+              {user?.role.toLowerCase() === 'admin' ? 'Courses' : 'My Courses'}
+            </h1>
+            <p className="text-muted-foreground">
+              {user?.role.toLowerCase() === 'admin' 
+                ? 'Manage courses and assign instructors.' 
+                : 'Manage your assigned courses and enrolled students.'}
+            </p>
           </div>
-          <Button onClick={handleAddCourse}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Course
-          </Button>
+          {user?.role.toLowerCase() === 'admin' && (
+            <Button onClick={handleAddCourse}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Course
+            </Button>
+          )}
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>All Courses</CardTitle>
-            <CardDescription>Courses currently available in the system.</CardDescription>
+            <CardTitle>
+              {user?.role.toLowerCase() === 'admin' ? 'All Courses' : 'Your Courses'}
+            </CardTitle>
+            <CardDescription>
+              {user?.role.toLowerCase() === 'admin'
+                ? 'Courses currently available in the system.'
+                : 'Courses you are currently teaching.'}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {loading ? (
@@ -306,28 +401,54 @@ export default function Courses() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                              <DropdownMenuItem onClick={() => handleEditCourse(course)}>
-                                <Pencil className="mr-2 h-4 w-4" />
-                                Edit
+                              <DropdownMenuItem onClick={() => navigate(`/dashboard/courses/${course.id}`)}>
+                                <Eye className="mr-2 h-4 w-4" />
+                                View Details
                               </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  setEnrollCourse(course)
-                                  setEnrollDialogOpen(true)
-                                  setEnrollEmail('')
-                                }}
-                              >
-                                <UserPlus className="mr-2 h-4 w-4" />
-                                Enroll student
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={() => handleDeleteCourse(course.id)}
-                                className="text-destructive"
-                              >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Delete
-                              </DropdownMenuItem>
+                              {user?.role.toLowerCase() === 'admin' && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem onClick={() => handleEditCourse(course)}>
+                                    <Pencil className="mr-2 h-4 w-4" />
+                                    Edit
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={async () => {
+                                      setEnrollCourse(course)
+                                      setEnrollEmail('')
+                                      await loadAvailableStudents()
+                                      setEnrollDialogOpen(true)
+                                    }}
+                                  >
+                                    <UserPlus className="mr-2 h-4 w-4" />
+                                    Enroll student
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={() => handleDeleteCourse(course.id)}
+                                    className="text-destructive"
+                                  >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Delete
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                              {user?.role.toLowerCase() === 'instructor' && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={async () => {
+                                      setEnrollCourse(course)
+                                      setEnrollEmail('')
+                                      await loadAvailableStudents()
+                                      setEnrollDialogOpen(true)
+                                    }}
+                                  >
+                                    <UserPlus className="mr-2 h-4 w-4" />
+                                    Enroll student
+                                  </DropdownMenuItem>
+                                </>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
@@ -412,27 +533,79 @@ export default function Courses() {
       <Dialog open={enrollDialogOpen} onOpenChange={setEnrollDialogOpen}>
         <DialogContent className="sm:max-w-[420px]">
           <DialogHeader>
-            <DialogTitle>Enroll student</DialogTitle>
+            <DialogTitle>Enroll Student</DialogTitle>
             <DialogDescription>
-              Add a student to {enrollCourse ? enrollCourse.name : 'this course'}.
+              Select a student to enroll in {enrollCourse ? enrollCourse.name : 'this course'}.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleEnroll} className="space-y-4">
             <div className="grid gap-2">
-              <Label htmlFor="student_email">Student Email</Label>
-              <Input
-                id="student_email"
-                type="email"
-                value={enrollEmail}
-                onChange={(e) => setEnrollEmail(e.target.value)}
-                required
-              />
+              <Label>Select Student</Label>
+              {loadingStudents ? (
+                <div className="text-sm text-muted-foreground py-2">Loading students...</div>
+              ) : availableStudents.length === 0 ? (
+                <div className="text-sm text-muted-foreground py-2">
+                  {allStudentsCount === 0 
+                    ? 'No students found. Please create student users first.'
+                    : 'All students are already enrolled in this course.'}
+                </div>
+              ) : (
+                <Popover open={studentComboOpen} onOpenChange={setStudentComboOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={studentComboOpen}
+                      className="w-full justify-between"
+                    >
+                      {enrollEmail
+                        ? availableStudents.find((student) => student.email === enrollEmail)?.name + 
+                          " (" + availableStudents.find((student) => student.email === enrollEmail)?.email + ")"
+                        : "Search and select a student..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[380px] p-0">
+                    <Command>
+                      <CommandInput placeholder="Search students by name or email..." />
+                      <CommandList>
+                        <CommandEmpty>No student found.</CommandEmpty>
+                        <CommandGroup>
+                          {availableStudents.map((student) => (
+                            <CommandItem
+                              key={student.id}
+                              value={`${student.name} ${student.email}`}
+                              onSelect={() => {
+                                setEnrollEmail(student.email)
+                                setStudentComboOpen(false)
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  enrollEmail === student.email ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              <div className="flex flex-col">
+                                <span className="font-medium">{student.name}</span>
+                                <span className="text-sm text-muted-foreground">{student.email}</span>
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              )}
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setEnrollDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit">Enroll</Button>
+              <Button type="submit" disabled={!enrollEmail || loadingStudents || availableStudents.length === 0}>
+                Enroll Student
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
