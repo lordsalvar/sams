@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import axios from 'axios'
-import { ArrowLeft, User, Mail, BookOpen, Users, UserMinus, UserPlus, Pencil, Trash2, Check, ChevronsUpDown } from 'lucide-react'
+import { ArrowLeft, User, Mail, BookOpen, Users, UserMinus, UserPlus, Pencil, Trash2, Check, ChevronsUpDown, QrCode, Loader2, Copy, Maximize2 } from 'lucide-react'
 import { DashboardLayout } from '../components/DashboardLayout'
 import { Button } from '../components/ui/button'
 import {
@@ -45,6 +45,8 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { Badge } from '../components/ui/badge'
 import { cn } from '../lib/utils'
+import QRCode from 'qrcode.react'
+import { Link } from 'react-router-dom'
 
 interface CourseDetail {
   id: number
@@ -81,7 +83,7 @@ const api = axios.create({ baseURL: '/api' })
 export default function CourseDetail() {
   const navigate = useNavigate()
   const { courseId } = useParams<{ courseId: string }>()
-  const [user, setUser] = useState<{ role: string; name: string } | null>(null)
+  const [user, setUser] = useState<{ role: string; name: string; email?: string } | null>(null)
   const [course, setCourse] = useState<CourseDetail | null>(null)
   const [students, setStudents] = useState<EnrolledStudent[]>([])
   const [loading, setLoading] = useState(true)
@@ -98,6 +100,9 @@ export default function CourseDetail() {
     code: '',
     instructor_email: '',
   })
+  const [attendanceSession, setAttendanceSession] = useState<{ token: string; expires_at: string; is_expired?: number } | null>(null)
+  const [qrGenerating, setQrGenerating] = useState(false)
+  const [qrError, setQrError] = useState('')
 
   useEffect(() => {
     const userStr = localStorage.getItem('user')
@@ -117,6 +122,13 @@ export default function CourseDetail() {
 
     loadCourseDetail()
   }, [navigate, courseId])
+
+  useEffect(() => {
+    if (course && user) {
+      loadAttendanceSession()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [course?.id, user?.role])
 
   const loadCourseDetail = async () => {
     setLoading(true)
@@ -224,6 +236,54 @@ export default function CourseDetail() {
     setEnrollDialogOpen(true)
   }
 
+  const handleGenerateQr = async () => {
+    if (!course || !user) return
+    setQrError('')
+    setQrGenerating(true)
+    try {
+      const res = await api.post('/courses/attendance-session', {
+        course_id: course.id,
+        requested_by_role: user.role,
+        requested_by_email: user.email || '',
+      })
+      if (res.data?.success && res.data.data) {
+        setAttendanceSession(res.data.data)
+      } else {
+        setQrError(res.data?.message || 'Failed to generate attendance QR')
+      }
+    } catch (err: any) {
+      console.error(err)
+      setQrError(err?.response?.data?.message || 'Failed to generate attendance QR')
+    } finally {
+      setQrGenerating(false)
+    }
+  }
+
+  const attendanceLink = attendanceSession
+    ? `${window.location.origin}/attendance-scan?token=${attendanceSession.token}`
+    : ''
+  const attendanceExpired = attendanceSession
+    ? (attendanceSession.is_expired === 1 || new Date(attendanceSession.expires_at).getTime() <= Date.now())
+    : false
+
+  const loadAttendanceSession = async () => {
+    if (!course || !user) return
+    try {
+      const res = await api.get('/courses/attendance-session', {
+        params: {
+          course_id: course.id,
+          requested_by_role: user.role,
+        }
+      })
+      if (res.data?.success && res.data.data) {
+        setAttendanceSession(res.data.data)
+        return
+      }
+    } catch (err) {
+      console.error('Failed to load attendance session', err)
+    }
+  }
+
   const handleEnrollStudent = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!course || !user || !enrollEmail) return
@@ -303,29 +363,49 @@ export default function CourseDetail() {
               </p>
             </div>
             
-            {!loading && course && user?.role.toLowerCase() === 'admin' && (
+            {!loading && course && (
               <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={handleOpenEnrollDialog}
-                >
-                  <UserPlus className="mr-2 h-4 w-4" />
-                  Enroll Student
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={handleEditCourse}
-                >
-                  <Pencil className="mr-2 h-4 w-4" />
-                  Edit Course
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={handleDeleteCourse}
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete
-                </Button>
+                {['admin', 'instructor'].includes(user?.role.toLowerCase() || '') && (
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={handleOpenEnrollDialog}
+                    >
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      Enroll Student
+                    </Button>
+                    <Button
+                      onClick={handleGenerateQr}
+                      variant="default"
+                      disabled={qrGenerating}
+                    >
+                      {qrGenerating ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <QrCode className="mr-2 h-4 w-4" />
+                      )}
+                      Generate Attendance QR
+                    </Button>
+                  </>
+                )}
+                {user?.role.toLowerCase() === 'admin' && (
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={handleEditCourse}
+                    >
+                      <Pencil className="mr-2 h-4 w-4" />
+                      Edit Course
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={handleDeleteCourse}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete
+                    </Button>
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -397,6 +477,79 @@ export default function CourseDetail() {
                 </div>
               </CardContent>
             </Card>
+
+            {['admin', 'instructor'].includes(user.role.toLowerCase()) && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <QrCode className="h-5 w-5" />
+                    Attendance QR
+                  </CardTitle>
+                  <CardDescription>
+                    Generate a time-bound QR that students can scan to record attendance.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                  <div className="space-y-2">
+                    <p className="text-sm text-muted-foreground">
+                      Click "Generate Attendance QR" to create a 15-minute session. Share the QR or link with students.
+                    </p>
+                    {qrError && (
+                      <p className="text-sm text-destructive">{qrError}</p>
+                    )}
+                    {attendanceSession && (
+                      <div className="space-y-1 text-sm">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">Expires at:</span>
+                          <span>
+                            {new Date(attendanceSession.expires_at).toLocaleString()}
+                          </span>
+                        </div>
+                        {attendanceExpired && (
+                          <div className="text-sm text-destructive">
+                            Session expired. Generate a new QR.
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2 break-all">
+                          <span className="font-medium">Link:</span>
+                          <span className="text-muted-foreground">{attendanceLink}</span>
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => attendanceLink && navigator.clipboard.writeText(attendanceLink)}
+                            aria-label="Copy attendance link"
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  {attendanceSession ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <QRCode value={attendanceLink} size={180} includeMargin />
+                      <p className="text-xs text-muted-foreground">
+                        Students scan this to record attendance.
+                      </p>
+                      {attendanceExpired && (
+                        <p className="text-xs text-destructive">Expired</p>
+                      )}
+                      <Button asChild variant="outline" className="mt-2">
+                        <Link to={`/dashboard/courses/${course.id}/attendance-display`}>
+                          <Maximize2 className="mr-2 h-4 w-4" />
+                          Open Fullscreen QR
+                        </Link>
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="text-sm text-muted-foreground">
+                      Generate a session to display the QR.
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             {/* Enrolled Students */}
             <Card>

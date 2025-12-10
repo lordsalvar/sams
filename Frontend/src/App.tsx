@@ -5,6 +5,8 @@ import Dashboard from './pages/Dashboard'
 import Users from './pages/Users'
 import Courses from './pages/Courses'
 import CourseDetail from './pages/CourseDetail'
+import AttendanceScan from './pages/AttendanceScan'
+import AttendanceDisplay from './pages/AttendanceDisplay'
 import './App.css'
 
 function App(): JSX.Element {
@@ -23,6 +25,8 @@ function App(): JSX.Element {
         <Route path="/dashboard/users" element={<Users />} />
         <Route path="/dashboard/courses" element={<Courses />} />
         <Route path="/dashboard/courses/:courseId" element={<CourseDetail />} />
+        <Route path="/dashboard/courses/:courseId/attendance-display" element={<AttendanceDisplay />} />
+        <Route path="/attendance-scan" element={<AttendanceScan />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

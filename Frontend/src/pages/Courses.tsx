@@ -107,20 +107,36 @@ export default function Courses() {
     const userData = JSON.parse(userStr)
     setUser(userData)
 
-    // Only admins can manage courses
-    if (userData.role.toLowerCase() !== 'admin') {
+    // Only admins and instructors can view courses
+    if (!['admin', 'instructor'].includes(userData.role.toLowerCase())) {
       navigate('/dashboard')
       return
     }
 
-    loadCourses()
-    loadInstructors(userData.role)
+    loadCourses(userData)
+    if (userData.role.toLowerCase() === 'admin') {
+      loadInstructors(userData.role)
+    }
   }, [navigate])
 
-  const loadCourses = async () => {
+  const loadCourses = async (userData?: { role: string; email?: string; name?: string }) => {
     setLoading(true)
     try {
-      const res = await api.get('/courses')
+      // Get userData from parameter or localStorage
+      if (!userData) {
+        const userStr = localStorage.getItem('user')
+        userData = userStr ? JSON.parse(userStr) : null
+      }
+      
+      const params: any = {}
+      
+      // If instructor, filter by their email
+      if (userData?.role.toLowerCase() === 'instructor' && userData?.email) {
+        params.requested_by_role = userData.role
+        params.instructor_email = userData.email
+      }
+      
+      const res = await api.get('/courses', { params })
       if (res.data?.success) {
         setCourses(res.data.data ?? [])
       } else {
@@ -300,19 +316,33 @@ export default function Courses() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Courses</h1>
-            <p className="text-muted-foreground">Manage courses and assign instructors.</p>
+            <h1 className="text-3xl font-bold tracking-tight">
+              {user?.role.toLowerCase() === 'admin' ? 'Courses' : 'My Courses'}
+            </h1>
+            <p className="text-muted-foreground">
+              {user?.role.toLowerCase() === 'admin' 
+                ? 'Manage courses and assign instructors.' 
+                : 'Manage your assigned courses and enrolled students.'}
+            </p>
           </div>
-          <Button onClick={handleAddCourse}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Course
-          </Button>
+          {user?.role.toLowerCase() === 'admin' && (
+            <Button onClick={handleAddCourse}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Course
+            </Button>
+          )}
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>All Courses</CardTitle>
-            <CardDescription>Courses currently available in the system.</CardDescription>
+            <CardTitle>
+              {user?.role.toLowerCase() === 'admin' ? 'All Courses' : 'Your Courses'}
+            </CardTitle>
+            <CardDescription>
+              {user?.role.toLowerCase() === 'admin'
+                ? 'Courses currently available in the system.'
+                : 'Courses you are currently teaching.'}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {loading ? (
@@ -375,30 +405,50 @@ export default function Courses() {
                                 <Eye className="mr-2 h-4 w-4" />
                                 View Details
                               </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem onClick={() => handleEditCourse(course)}>
-                                <Pencil className="mr-2 h-4 w-4" />
-                                Edit
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={async () => {
-                                  setEnrollCourse(course)
-                                  setEnrollEmail('')
-                                  await loadAvailableStudents()
-                                  setEnrollDialogOpen(true)
-                                }}
-                              >
-                                <UserPlus className="mr-2 h-4 w-4" />
-                                Enroll student
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={() => handleDeleteCourse(course.id)}
-                                className="text-destructive"
-                              >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Delete
-                              </DropdownMenuItem>
+                              {user?.role.toLowerCase() === 'admin' && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem onClick={() => handleEditCourse(course)}>
+                                    <Pencil className="mr-2 h-4 w-4" />
+                                    Edit
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={async () => {
+                                      setEnrollCourse(course)
+                                      setEnrollEmail('')
+                                      await loadAvailableStudents()
+                                      setEnrollDialogOpen(true)
+                                    }}
+                                  >
+                                    <UserPlus className="mr-2 h-4 w-4" />
+                                    Enroll student
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={() => handleDeleteCourse(course.id)}
+                                    className="text-destructive"
+                                  >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Delete
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                              {user?.role.toLowerCase() === 'instructor' && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={async () => {
+                                      setEnrollCourse(course)
+                                      setEnrollEmail('')
+                                      await loadAvailableStudents()
+                                      setEnrollDialogOpen(true)
+                                    }}
+                                  >
+                                    <UserPlus className="mr-2 h-4 w-4" />
+                                    Enroll student
+                                  </DropdownMenuItem>
+                                </>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>

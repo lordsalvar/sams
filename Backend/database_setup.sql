@@ -93,3 +93,36 @@ ON DUPLICATE KEY UPDATE name=name;
 -- 4. Students can then view their enrolled courses
 -- 5. Instructors can view all students enrolled in their courses
 
+-- ============================================
+-- Attendance (QR) tables
+-- ============================================
+CREATE TABLE IF NOT EXISTS attendance_sessions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    course_id INT NOT NULL,
+    token CHAR(36) NOT NULL UNIQUE,
+    expires_at DATETIME NOT NULL,
+    created_by_email VARCHAR(100) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_attendance_course (course_id),
+    INDEX idx_attendance_expires (expires_at),
+    CONSTRAINT fk_attendance_course FOREIGN KEY (course_id)
+        REFERENCES courses(id)
+        ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS attendance_logs (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    session_id INT NOT NULL,
+    student_id INT NOT NULL,
+    scanned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uniq_session_student (session_id, student_id),
+    INDEX idx_session (session_id),
+    INDEX idx_student (student_id),
+    CONSTRAINT fk_attendance_log_session FOREIGN KEY (session_id)
+        REFERENCES attendance_sessions(id)
+        ON DELETE CASCADE,
+    CONSTRAINT fk_attendance_log_student FOREIGN KEY (student_id)
+        REFERENCES users(id)
+        ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
