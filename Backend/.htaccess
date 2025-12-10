@@ -1,0 +1,3 @@
+# Simple .htaccess - allow direct file access
+# RewriteEngine is disabled for now to allow direct PHP file access
+
