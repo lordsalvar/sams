@@ -34,16 +34,24 @@ $routes = [
     'GET' => [
         '/test' => 'api/test.php',
         '/test.php' => 'api/test.php',
+        '/courses' => 'api/courses.php',
+        '/courses.php' => 'api/courses.php',
     ],
     'POST' => [
         '/auth/login' => 'api/auth/login.php',
         '/auth/login.php' => 'api/auth/login.php',
+        '/courses' => 'api/courses.php',
+        '/courses.php' => 'api/courses.php',
+        '/courses/enroll' => 'api/courses.php',
+        '/courses/enroll.php' => 'api/courses.php',
     ],
     'PUT' => [
-        // Add your PUT routes here
+        '/courses' => 'api/courses.php',
+        '/courses.php' => 'api/courses.php',
     ],
     'DELETE' => [
-        // Add your DELETE routes here
+        '/courses' => 'api/courses.php',
+        '/courses.php' => 'api/courses.php',
     ],
 ];
 

@@ -2,6 +2,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import type { ComponentType } from 'react'
 import {
   LayoutDashboard,
+  BookOpen,
   Users,
   Settings,
   LogOut,
@@ -15,7 +16,6 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -47,6 +47,12 @@ const navItems: NavItem[] = [
     href: '/dashboard/users',
     icon: Users,
     roles: ['admin', 'manager'],
+  },
+  {
+    title: 'Courses',
+    href: '/dashboard/courses',
+    icon: BookOpen,
+    roles: ['admin'],
   },
   {
     title: 'Reports',
