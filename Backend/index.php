@@ -36,6 +36,8 @@ $routes = [
         '/test.php' => 'api/test.php',
         '/courses' => 'api/courses.php',
         '/courses.php' => 'api/courses.php',
+        '/courses/instructors' => 'api/courses.php',
+        '/courses/instructors.php' => 'api/courses.php',
     ],
     'POST' => [
         '/auth/login' => 'api/auth/login.php',

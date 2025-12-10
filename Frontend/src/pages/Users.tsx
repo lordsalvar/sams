@@ -41,7 +41,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 
 interface User {
   id: number
-  username: string
+  name: string
   email: string
   role: 'admin' | 'instructor' | 'student'
   created_at?: string
@@ -49,13 +49,13 @@ interface User {
 
 export default function Users() {
   const navigate = useNavigate()
-  const [user, setUser] = useState<{ role: string; username: string } | null>(null)
+  const [user, setUser] = useState<{ role: string; name: string } | null>(null)
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingUser, setEditingUser] = useState<User | null>(null)
   const [formData, setFormData] = useState({
-    username: '',
+    name: '',
     email: '',
     password: '',
     role: 'student' as 'admin' | 'instructor' | 'student',
@@ -90,21 +90,21 @@ export default function Users() {
       setUsers([
         {
           id: 1,
-          username: 'admin',
+          name: 'Admin User',
           email: 'admin@local.dev',
           role: 'admin',
           created_at: '2024-01-01',
         },
         {
           id: 2,
-          username: 'instructor',
+          name: 'Instructor User',
           email: 'instructor@local.dev',
           role: 'instructor',
           created_at: '2024-01-02',
         },
         {
           id: 3,
-          username: 'student',
+          name: 'Student User',
           email: 'student@local.dev',
           role: 'student',
           created_at: '2024-01-03',
@@ -123,7 +123,7 @@ export default function Users() {
   const handleAddUser = () => {
     setEditingUser(null)
     setFormData({
-      username: '',
+      name: '',
       email: '',
       password: '',
       role: 'student',
@@ -134,7 +134,7 @@ export default function Users() {
   const handleEditUser = (user: User) => {
     setEditingUser(user)
     setFormData({
-      username: user.username,
+      name: user.name,
       email: user.email,
       password: '',
       role: user.role,
@@ -162,7 +162,7 @@ export default function Users() {
           u.id === editingUser.id
             ? {
                 ...u,
-                username: formData.username,
+                name: formData.name,
                 email: formData.email,
                 role: formData.role,
               }
@@ -173,7 +173,7 @@ export default function Users() {
       // Create user
       const newUser: User = {
         id: users.length + 1,
-        username: formData.username,
+        name: formData.name,
         email: formData.email,
         role: formData.role,
         created_at: new Date().toISOString().split('T')[0],
@@ -183,7 +183,7 @@ export default function Users() {
 
     setIsDialogOpen(false)
     setFormData({
-      username: '',
+      name: '',
       email: '',
       password: '',
       role: 'student',
@@ -228,7 +228,7 @@ export default function Users() {
   return (
     <DashboardLayout
       userRole={user.role}
-      username={user.username}
+      name={user.name}
       onLogout={handleLogout}
       title="Users"
     >
@@ -263,7 +263,7 @@ export default function Users() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>ID</TableHead>
-                    <TableHead>Username</TableHead>
+                    <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Role</TableHead>
                     <TableHead>Created</TableHead>
@@ -281,7 +281,7 @@ export default function Users() {
                     users.map((user) => (
                       <TableRow key={user.id}>
                         <TableCell className="font-medium">{user.id}</TableCell>
-                        <TableCell>{user.username}</TableCell>
+                        <TableCell>{user.name}</TableCell>
                         <TableCell>{user.email}</TableCell>
                         <TableCell>
                           <Badge variant={getRoleBadgeVariant(user.role)}>
@@ -343,12 +343,12 @@ export default function Users() {
           <form onSubmit={handleSubmit}>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label htmlFor="username">Username</Label>
+                <Label htmlFor="name">Name</Label>
                 <Input
-                  id="username"
-                  value={formData.username}
+                  id="name"
+                  value={formData.name}
                   onChange={(e) =>
-                    setFormData({ ...formData, username: e.target.value })
+                    setFormData({ ...formData, name: e.target.value })
                   }
                   required
                 />
