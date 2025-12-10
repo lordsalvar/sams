@@ -13,7 +13,7 @@ interface LoginResponse {
   message?: string
   user?: {
     id: number
-    username: string
+    name: string
     email: string
     role: string
   }

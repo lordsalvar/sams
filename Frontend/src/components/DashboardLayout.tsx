@@ -11,7 +11,7 @@ import { ThemeToggle } from './ThemeToggle'
 interface DashboardLayoutProps {
   children: ReactNode
   userRole: string
-  username: string
+  name: string
   onLogout: () => void
   title?: string
 }
@@ -19,13 +19,13 @@ interface DashboardLayoutProps {
 export function DashboardLayout({
   children,
   userRole,
-  username,
+  name,
   onLogout,
   title = 'Dashboard',
 }: DashboardLayoutProps) {
   return (
     <SidebarProvider>
-      <AppSidebar userRole={userRole} username={username} onLogout={onLogout} />
+      <AppSidebar userRole={userRole} name={name} onLogout={onLogout} />
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4 lg:px-6">
           <SidebarTrigger className="-ml-1" />

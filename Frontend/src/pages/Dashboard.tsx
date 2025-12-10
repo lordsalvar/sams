@@ -5,7 +5,7 @@ import { DashboardLayout } from '../components/DashboardLayout'
 
 interface User {
   id: number
-  username: string
+  name: string
   email: string
   role: string
 }
@@ -51,7 +51,7 @@ export default function Dashboard() {
   return (
     <DashboardLayout
       userRole={user.role}
-      username={user.username}
+      name={user.name}
       onLogout={handleLogout}
     >
       <div className="space-y-6">

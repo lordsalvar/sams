@@ -7,7 +7,7 @@ USE sams_db;
 -- Users table
 CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    username VARCHAR(50) NOT NULL UNIQUE,
+    name VARCHAR(50) NOT NULL UNIQUE,
     email VARCHAR(100) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
     role ENUM('admin', 'instructor', 'student') NOT NULL DEFAULT 'student',
@@ -42,19 +42,19 @@ CREATE TABLE IF NOT EXISTS enrollments (
 -- To generate a new hash, run: php generate_password_hash.php
 
 -- Admin user
-INSERT INTO users (username, email, password, role) VALUES
-('admin', 'admin@local.dev', '$2y$12$2gAFjze.5zbVDvH01.KSo..x4vnEtWsSEobnQBPFja/VBJWhtIa0y', 'admin')
-ON DUPLICATE KEY UPDATE username=username;
+INSERT INTO users (name, email, password, role) VALUES
+('Admin User', 'admin@local.dev', '$2y$12$2gAFjze.5zbVDvH01.KSo..x4vnEtWsSEobnQBPFja/VBJWhtIa0y', 'admin')
+ON DUPLICATE KEY UPDATE name=name;
 
 -- Instructor user
-INSERT INTO users (username, email, password, role) VALUES
-('instructor', 'instructor@local.dev', '$2y$12$2gAFjze.5zbVDvH01.KSo..x4vnEtWsSEobnQBPFja/VBJWhtIa0y', 'instructor')
-ON DUPLICATE KEY UPDATE username=username;
+INSERT INTO users (name, email, password, role) VALUES
+('Instructor User', 'instructor@local.dev', '$2y$12$2gAFjze.5zbVDvH01.KSo..x4vnEtWsSEobnQBPFja/VBJWhtIa0y', 'instructor')
+ON DUPLICATE KEY UPDATE name=name;
 
 -- Student user
-INSERT INTO users (username, email, password, role) VALUES
-('student', 'student@local.dev', '$2y$12$2gAFjze.5zbVDvH01.KSo..x4vnEtWsSEobnQBPFja/VBJWhtIa0y', 'student')
-ON DUPLICATE KEY UPDATE username=username;
+INSERT INTO users (name, email, password, role) VALUES
+('Student User', 'student@local.dev', '$2y$12$2gAFjze.5zbVDvH01.KSo..x4vnEtWsSEobnQBPFja/VBJWhtIa0y', 'student')
+ON DUPLICATE KEY UPDATE name=name;
 
 -- Test Credentials:
 -- Admin: admin@local.dev / password

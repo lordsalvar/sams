@@ -25,10 +25,16 @@ function db()
     return $conn;
 }
 
-// Basic role guard (expects role from client for now)
+// Basic role guard (expects role from client for now; supports body or query param)
 function requireRole(array $allowed, $body)
 {
-    $role = isset($body['requested_by_role']) ? strtolower(trim($body['requested_by_role'])) : '';
+    $role = '';
+    if (is_array($body) && isset($body['requested_by_role'])) {
+        $role = $body['requested_by_role'];
+    } elseif (isset($_GET['requested_by_role'])) {
+        $role = $_GET['requested_by_role'];
+    }
+    $role = strtolower(trim((string)$role));
     if (!in_array($role, array_map('strtolower', $allowed), true)) {
         sendResponse(['success' => false, 'message' => 'Unauthorized'], 403);
     }
@@ -37,8 +43,18 @@ function requireRole(array $allowed, $body)
 // Detect enroll action (mapped from /courses/enroll route)
 $isEnroll = strpos($_SERVER['REQUEST_URI'], '/courses/enroll') !== false || strpos($_SERVER['REQUEST_URI'], '/courses/enroll.php') !== false;
 
+// Detect instructor directory via path or query
+parse_str(parse_url($_SERVER['REQUEST_URI'], PHP_URL_QUERY) ?? '', $queryParams);
+$isInstructorList = strpos($_SERVER['REQUEST_URI'], '/courses/instructors') !== false
+    || strpos($_SERVER['REQUEST_URI'], '/courses/instructors.php') !== false
+    || isset($queryParams['instructors'])
+    || (isset($queryParams['list']) && strtolower((string)$queryParams['list']) === 'instructors');
+
 $method = $_SERVER['REQUEST_METHOD'];
 $body = getRequestBody();
+if (!is_array($body)) {
+    $body = [];
+}
 $conn = db();
 
 if ($isEnroll) {
@@ -96,6 +112,24 @@ if ($isEnroll) {
     $stmt->close();
 
     sendResponse(['success' => true, 'message' => 'Student enrolled']);
+}
+
+if ($isInstructorList) {
+    if ($method !== 'GET') {
+        sendResponse(['success' => false, 'message' => 'Method not allowed'], 405);
+    }
+    // Only admins/instructors can request the instructor directory (admin uses it to assign)
+    requireRole(['admin', 'instructor'], $body);
+
+    $stmt = $conn->prepare("SELECT id, name, email FROM users WHERE role = 'instructor' ORDER BY name ASC");
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $rows = [];
+    while ($row = $result->fetch_assoc()) {
+        $rows[] = $row;
+    }
+    $stmt->close();
+    sendResponse(['success' => true, 'data' => $rows]);
 }
 
 switch ($method) {

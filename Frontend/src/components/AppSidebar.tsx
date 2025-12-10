@@ -25,7 +25,7 @@ import { ThemeToggle } from './ThemeToggle'
 
 interface AppSidebarProps {
   userRole: string
-  username: string
+  name: string
   onLogout: () => void
 }
 
@@ -71,7 +71,7 @@ const navItems: NavItem[] = [
   },
 ]
 
-export function AppSidebar({ userRole, username, onLogout }: AppSidebarProps) {
+export function AppSidebar({ userRole, name, onLogout }: AppSidebarProps) {
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -132,7 +132,7 @@ export function AppSidebar({ userRole, username, onLogout }: AppSidebarProps) {
                 <UserCircle className="h-5 w-5 text-primary" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{username}</p>
+                <p className="text-sm font-medium truncate">{name}</p>
                 <p className="text-xs text-muted-foreground truncate">{userRole}</p>
               </div>
             </div>

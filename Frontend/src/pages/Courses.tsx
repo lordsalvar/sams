@@ -32,6 +32,13 @@ import { Input } from '../components/ui/input'
 import { Label } from '../components/ui/label'
 import { Badge } from '../components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../components/ui/select'
 
 interface Course {
   id: number
@@ -41,15 +48,22 @@ interface Course {
   enrollment_count?: number
 }
 
+interface Instructor {
+  id: number
+  name: string
+  email: string
+}
+
 const api = axios.create({ baseURL: '/api' })
 
 export default function Courses() {
   const navigate = useNavigate()
-  const [user, setUser] = useState<{ role: string; username: string } | null>(null)
+  const [user, setUser] = useState<{ role: string; name: string } | null>(null)
   const [courses, setCourses] = useState<Course[]>([])
   const [loading, setLoading] = useState(true)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingCourse, setEditingCourse] = useState<Course | null>(null)
+  const [instructors, setInstructors] = useState<Instructor[]>([])
   const [formData, setFormData] = useState({
     name: '',
     code: '',
@@ -76,6 +90,7 @@ export default function Courses() {
     }
 
     loadCourses()
+    loadInstructors(userData.role)
   }, [navigate])
 
   const loadCourses = async () => {
@@ -95,6 +110,23 @@ export default function Courses() {
     }
   }
 
+  const loadInstructors = async (role: string) => {
+    try {
+      // use query param fallback so it works even when pretty route is not available
+      const res = await api.get('/courses', {
+        params: { list: 'instructors', requested_by_role: role },
+      })
+      if (res.data?.success) {
+        setInstructors(res.data.data ?? [])
+      } else {
+        alert(res.data?.message || 'Failed to load instructors')
+      }
+    } catch (err) {
+      console.error(err)
+      alert('Failed to load instructors')
+    }
+  }
+
   const handleLogout = () => {
     localStorage.removeItem('user')
     localStorage.removeItem('token')
@@ -106,7 +138,7 @@ export default function Courses() {
     setFormData({
       name: '',
       code: '',
-      instructor_email: '',
+      instructor_email: instructors[0]?.email ?? '',
     })
     setIsDialogOpen(true)
   }
@@ -135,6 +167,10 @@ export default function Courses() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!user) return
+    if (!formData.instructor_email) {
+      alert('Please select an instructor')
+      return
+    }
     try {
       if (editingCourse) {
         await api.put('/courses', {
@@ -192,7 +228,7 @@ export default function Courses() {
   return (
     <DashboardLayout
       userRole={user.role}
-      username={user.username}
+      name={user.name}
       onLogout={handleLogout}
       title="Courses"
     >
@@ -335,14 +371,32 @@ export default function Courses() {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="instructor_email">Instructor Email</Label>
-              <Input
-                id="instructor_email"
-                type="email"
-                value={formData.instructor_email}
-                onChange={(e) => setFormData({ ...formData, instructor_email: e.target.value })}
-                required
-              />
+              <Label htmlFor="instructor_email">Instructor</Label>
+              {instructors.length === 0 ? (
+                <div className="text-sm text-muted-foreground">
+                  No instructors available. Please create an instructor user first.
+                </div>
+              ) : (
+                <Select
+                  value={
+                    instructors.some((inst) => inst.email === formData.instructor_email)
+                      ? formData.instructor_email
+                      : ''
+                  }
+                  onValueChange={(value) => setFormData({ ...formData, instructor_email: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select an instructor" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {instructors.map((inst) => (
+                      <SelectItem key={inst.id} value={inst.email}>
+                        {inst.name} ({inst.email})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
