@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
-import { Plus, MoreHorizontal, Pencil, Trash2, BookOpen, User, UserPlus } from 'lucide-react'
+import { Plus, MoreHorizontal, Pencil, Trash2, BookOpen, User, UserPlus, Eye } from 'lucide-react'
 import { DashboardLayout } from '../components/DashboardLayout'
 import { Button } from '../components/ui/button'
 import {
@@ -133,8 +133,12 @@ export default function Courses() {
     navigate('/login')
   }
 
-  const handleAddCourse = () => {
+  const handleAddCourse = async () => {
     setEditingCourse(null)
+    // Reload instructors to get the latest list
+    if (user) {
+      await loadInstructors(user.role)
+    }
     setFormData({
       name: '',
       code: '',
@@ -143,8 +147,12 @@ export default function Courses() {
     setIsDialogOpen(true)
   }
 
-  const handleEditCourse = (course: Course) => {
+  const handleEditCourse = async (course: Course) => {
     setEditingCourse(course)
+    // Reload instructors to get the latest list
+    if (user) {
+      await loadInstructors(user.role)
+    }
     setFormData({
       name: course.name,
       code: course.code,
@@ -306,6 +314,11 @@ export default function Courses() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                              <DropdownMenuItem onClick={() => navigate(`/dashboard/courses/${course.id}`)}>
+                                <Eye className="mr-2 h-4 w-4" />
+                                View Details
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
                               <DropdownMenuItem onClick={() => handleEditCourse(course)}>
                                 <Pencil className="mr-2 h-4 w-4" />
                                 Edit

@@ -16,7 +16,11 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost/sams/Backend',
         changeOrigin: true,
-        rewrite: (path) => path
+        rewrite: (path) => {
+          // Convert /api/courses to /api/courses.php
+          // Convert /api/courses/enroll to /api/courses.php/enroll
+          return path.replace(/^\/api\/([^\/\?]+)/, '/api/$1.php')
+        }
       }
     }
   }

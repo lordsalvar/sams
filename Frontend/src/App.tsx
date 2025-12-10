@@ -4,6 +4,7 @@ import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Users from './pages/Users'
 import Courses from './pages/Courses'
+import CourseDetail from './pages/CourseDetail'
 import './App.css'
 
 function App(): JSX.Element {
@@ -21,6 +22,7 @@ function App(): JSX.Element {
         <Route path="/dashboard/:role" element={<Dashboard />} />
         <Route path="/dashboard/users" element={<Users />} />
         <Route path="/dashboard/courses" element={<Courses />} />
+        <Route path="/dashboard/courses/:courseId" element={<CourseDetail />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

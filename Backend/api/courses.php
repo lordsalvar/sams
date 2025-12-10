@@ -43,6 +43,9 @@ function requireRole(array $allowed, $body)
 // Detect enroll action (mapped from /courses/enroll route)
 $isEnroll = strpos($_SERVER['REQUEST_URI'], '/courses/enroll') !== false || strpos($_SERVER['REQUEST_URI'], '/courses/enroll.php') !== false;
 
+// Detect unenroll action (mapped from /courses/unenroll route)
+$isUnenroll = strpos($_SERVER['REQUEST_URI'], '/courses/unenroll') !== false || strpos($_SERVER['REQUEST_URI'], '/courses/unenroll.php') !== false;
+
 // Detect instructor directory via path or query
 parse_str(parse_url($_SERVER['REQUEST_URI'], PHP_URL_QUERY) ?? '', $queryParams);
 $isInstructorList = strpos($_SERVER['REQUEST_URI'], '/courses/instructors') !== false
@@ -114,6 +117,31 @@ if ($isEnroll) {
     sendResponse(['success' => true, 'message' => 'Student enrolled']);
 }
 
+if ($isUnenroll) {
+    if ($method !== 'DELETE') {
+        sendResponse(['success' => false, 'message' => 'Method not allowed'], 405);
+    }
+    requireRole(['admin'], $body);
+
+    parse_str(parse_url($_SERVER['REQUEST_URI'], PHP_URL_QUERY) ?? '', $query);
+    $enrollmentId = isset($query['enrollment_id']) ? (int)$query['enrollment_id'] : null;
+    
+    if (!$enrollmentId) {
+        sendResponse(['success' => false, 'message' => 'enrollment_id is required'], 400);
+    }
+
+    // Delete the enrollment
+    $stmt = $conn->prepare("DELETE FROM enrollments WHERE id = ?");
+    $stmt->bind_param("i", $enrollmentId);
+    $ok = $stmt->execute();
+    if (!$ok || $stmt->affected_rows === 0) {
+        sendResponse(['success' => false, 'message' => 'Enrollment not found or already removed'], 404);
+    }
+    $stmt->close();
+
+    sendResponse(['success' => true, 'message' => 'Student unenrolled successfully']);
+}
+
 if ($isInstructorList) {
     if ($method !== 'GET') {
         sendResponse(['success' => false, 'message' => 'Method not allowed'], 405);
@@ -134,6 +162,52 @@ if ($isInstructorList) {
 
 switch ($method) {
     case 'GET':
+        // Check if requesting a specific course by ID
+        parse_str(parse_url($_SERVER['REQUEST_URI'], PHP_URL_QUERY) ?? '', $query);
+        if (isset($query['id'])) {
+            $courseId = (int)$query['id'];
+            
+            // Get course details with instructor name
+            $stmt = $conn->prepare("
+                SELECT c.id, c.name, c.code, c.instructor_email, c.created_at, c.updated_at,
+                       u.name as instructor_name
+                FROM courses c
+                LEFT JOIN users u ON u.email = c.instructor_email AND u.role = 'instructor'
+                WHERE c.id = ?
+            ");
+            $stmt->bind_param("i", $courseId);
+            $stmt->execute();
+            $courseResult = $stmt->get_result();
+            
+            if ($courseResult->num_rows === 0) {
+                sendResponse(['success' => false, 'message' => 'Course not found'], 404);
+            }
+            
+            $course = $courseResult->fetch_assoc();
+            $stmt->close();
+            
+            // Get enrolled students
+            $stmt = $conn->prepare("
+                SELECT e.id, e.student_id, u.name as student_name, u.email as student_email, e.created_at as enrolled_at
+                FROM enrollments e
+                JOIN users u ON u.id = e.student_id
+                WHERE e.course_id = ?
+                ORDER BY u.name ASC
+            ");
+            $stmt->bind_param("i", $courseId);
+            $stmt->execute();
+            $studentsResult = $stmt->get_result();
+            
+            $students = [];
+            while ($row = $studentsResult->fetch_assoc()) {
+                $students[] = $row;
+            }
+            $stmt->close();
+            
+            sendResponse(['success' => true, 'data' => ['course' => $course, 'students' => $students]]);
+        }
+        
+        // Otherwise, return all courses
         $sql = "SELECT c.id, c.name, c.code, c.instructor_email, c.created_at, c.updated_at,
                        COUNT(e.id) as enrollment_count
                 FROM courses c
