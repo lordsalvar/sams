@@ -7,6 +7,8 @@ import Courses from './pages/Courses'
 import CourseDetail from './pages/CourseDetail'
 import AttendanceScan from './pages/AttendanceScan'
 import AttendanceDisplay from './pages/AttendanceDisplay'
+import AttendanceSessions from './pages/AttendanceSessions'
+import AttendanceAnalytics from './pages/AttendanceAnalytics'
 import './App.css'
 
 function App(): JSX.Element {
@@ -25,7 +27,9 @@ function App(): JSX.Element {
         <Route path="/dashboard/users" element={<Users />} />
         <Route path="/dashboard/courses" element={<Courses />} />
         <Route path="/dashboard/courses/:courseId" element={<CourseDetail />} />
+        <Route path="/dashboard/courses/:courseId/attendance-sessions" element={<AttendanceSessions />} />
         <Route path="/dashboard/courses/:courseId/attendance-display" element={<AttendanceDisplay />} />
+        <Route path="/dashboard/courses/:courseId/attendance-analytics" element={<AttendanceAnalytics />} />
         <Route path="/attendance-scan" element={<AttendanceScan />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
