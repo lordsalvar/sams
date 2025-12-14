@@ -38,14 +38,22 @@ $routes = [
         '/courses.php' => 'api/courses.php',
         '/courses/instructors' => 'api/courses.php',
         '/courses/instructors.php' => 'api/courses.php',
+        '/courses/students' => 'api/courses.php',
+        '/courses/students.php' => 'api/courses.php',
+        '/courses/attendance-sessions' => 'api/attendance/sessions.php',
+        '/courses/attendance-session' => 'api/attendance/sessions.php',
+        '/courses/attendance-logs' => 'api/attendance/logs.php',
+        '/courses/attendance-analytics' => 'api/attendance/analytics.php',
     ],
     'POST' => [
         '/auth/login' => 'api/auth/login.php',
         '/auth/login.php' => 'api/auth/login.php',
         '/courses' => 'api/courses.php',
         '/courses.php' => 'api/courses.php',
-        '/courses/enroll' => 'api/courses.php',
-        '/courses/enroll.php' => 'api/courses.php',
+        '/courses/enroll' => 'api/enrollments.php',
+        '/courses/enroll.php' => 'api/enrollments.php',
+        '/courses/attendance-session' => 'api/attendance/sessions.php',
+        '/courses/attendance-scan' => 'api/attendance/scan.php',
     ],
     'PUT' => [
         '/courses' => 'api/courses.php',
@@ -54,6 +62,8 @@ $routes = [
     'DELETE' => [
         '/courses' => 'api/courses.php',
         '/courses.php' => 'api/courses.php',
+        '/courses/unenroll' => 'api/enrollments.php',
+        '/courses/unenroll.php' => 'api/enrollments.php',
     ],
 ];
 
