@@ -3,42 +3,10 @@
 
 $configPath = dirname(__DIR__) . '/api/config.php';
 require_once $configPath;
+require_once dirname(__DIR__) . '/api/helpers/functions.php';
 
-// CORS
-header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Authorization");
-header("Content-Type: application/json; charset=UTF-8");
-
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit();
-}
-
-// DB connection
-function db()
-{
-    $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
-    if ($conn->connect_error) {
-        sendResponse(['success' => false, 'message' => 'Database connection failed'], 500);
-    }
-    return $conn;
-}
-
-// Basic role guard (expects role from client for now; supports body or query param)
-function requireRole(array $allowed, $body)
-{
-    $role = '';
-    if (is_array($body) && isset($body['requested_by_role'])) {
-        $role = $body['requested_by_role'];
-    } elseif (isset($_GET['requested_by_role'])) {
-        $role = $_GET['requested_by_role'];
-    }
-    $role = strtolower(trim((string)$role));
-    if (!in_array($role, array_map('strtolower', $allowed), true)) {
-        sendResponse(['success' => false, 'message' => 'Unauthorized'], 403);
-    }
-}
+setCorsHeaders();
+handleOptionsRequest();
 
 $method = $_SERVER['REQUEST_METHOD'];
 $body = getRequestBody();
@@ -50,6 +18,29 @@ $conn = db();
 switch ($method) {
     case 'GET':
         // Only admins can view users list
+        // Parse query string to get role - check multiple sources
+        $role = null;
+        
+        // Check $_GET first (should be populated by PHP or index.php)
+        if (isset($_GET['requested_by_role']) && !empty($_GET['requested_by_role'])) {
+            $role = $_GET['requested_by_role'];
+        }
+        // Parse from REQUEST_URI as fallback
+        else {
+            $queryString = parse_url($_SERVER['REQUEST_URI'], PHP_URL_QUERY);
+            if ($queryString) {
+                parse_str($queryString, $query);
+                if (isset($query['requested_by_role']) && !empty($query['requested_by_role'])) {
+                    $role = $query['requested_by_role'];
+                }
+            }
+        }
+        
+        // Add role to body for requireRole function
+        if ($role) {
+            $body['requested_by_role'] = $role;
+        }
+        
         requireRole(['admin'], $body);
         
         $sql = "SELECT id, name, email, role, created_at FROM users ORDER BY id DESC";

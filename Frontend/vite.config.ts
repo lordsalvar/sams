@@ -24,7 +24,9 @@ export default defineConfig({
               path.includes('/unenroll') || 
               path.includes('/instructors') || 
               path.includes('/students') ||
-              path.includes('/auth/')) {
+              path.includes('/auth/') ||
+              path === '/api/users' ||
+              path.startsWith('/api/users?')) {
             return path
           }
           // For simple endpoints without subdirectories, add .php for backward compatibility
@@ -32,7 +34,7 @@ export default defineConfig({
           // But only if it doesn't already have .php and has no subdirectories
           const parts = path.split('/').filter(p => p)
           if (parts.length === 2 && !path.endsWith('.php')) {
-            // Simple endpoint like /api/courses or /api/users
+            // Simple endpoint like /api/courses (but not /api/users)
             return path + '.php'
           }
           return path

@@ -24,14 +24,36 @@ function db()
 function requireRole(array $allowed, $body)
 {
     $role = '';
-    if (is_array($body) && isset($body['requested_by_role'])) {
+    
+    // Check request body first (for POST, PUT, etc.)
+    if (is_array($body) && isset($body['requested_by_role']) && !empty($body['requested_by_role'])) {
         $role = $body['requested_by_role'];
-    } elseif (isset($_GET['requested_by_role'])) {
+    } 
+    // Check $_GET superglobal (should work for most cases)
+    elseif (isset($_GET['requested_by_role']) && !empty($_GET['requested_by_role'])) {
         $role = $_GET['requested_by_role'];
     }
+    // Parse query string from REQUEST_URI as fallback (for cases where $_GET isn't populated)
+    else {
+        $requestUri = $_SERVER['REQUEST_URI'] ?? '';
+        $queryString = parse_url($requestUri, PHP_URL_QUERY);
+        if ($queryString) {
+            parse_str($queryString, $query);
+            if (isset($query['requested_by_role']) && !empty($query['requested_by_role'])) {
+                $role = $query['requested_by_role'];
+            }
+        }
+    }
+    
     $role = strtolower(trim((string)$role));
-    if (!in_array($role, array_map('strtolower', $allowed), true)) {
-        sendResponse(['success' => false, 'message' => 'Unauthorized'], 403);
+    
+    if (empty($role)) {
+        sendResponse(['success' => false, 'message' => 'Role is required. Please provide requested_by_role parameter.'], 403);
+    }
+    
+    $allowedLower = array_map('strtolower', $allowed);
+    if (!in_array($role, $allowedLower, true)) {
+        sendResponse(['success' => false, 'message' => 'Unauthorized. Required role: ' . implode(' or ', $allowed) . '. Provided: ' . $role], 403);
     }
 }
 
