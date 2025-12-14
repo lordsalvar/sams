@@ -9,6 +9,7 @@ import AttendanceScan from './pages/AttendanceScan'
 import AttendanceDisplay from './pages/AttendanceDisplay'
 import AttendanceSessions from './pages/AttendanceSessions'
 import AttendanceAnalytics from './pages/AttendanceAnalytics'
+import AllSessions from './pages/AllSessions'
 import './App.css'
 
 function App(): JSX.Element {
@@ -30,6 +31,7 @@ function App(): JSX.Element {
         <Route path="/dashboard/courses/:courseId/attendance-sessions" element={<AttendanceSessions />} />
         <Route path="/dashboard/courses/:courseId/attendance-display" element={<AttendanceDisplay />} />
         <Route path="/dashboard/courses/:courseId/attendance-analytics" element={<AttendanceAnalytics />} />
+        <Route path="/dashboard/sessions" element={<AllSessions />} />
         <Route path="/attendance-scan" element={<AttendanceScan />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

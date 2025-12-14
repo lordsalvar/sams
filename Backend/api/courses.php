@@ -99,6 +99,65 @@ if (!is_array($body)) {
 }
 $conn = db();
 
+// Check attendance-sessions (plural) BEFORE attendance-session (singular)
+// because strpos will match both, and we want the more specific route first
+if ($isAttendanceSessionsList) {
+    if ($method !== 'GET') {
+        sendResponse(['success' => false, 'message' => 'Method not allowed'], 405);
+    }
+    requireRole(['admin', 'instructor'], $body);
+
+    parse_str(parse_url($_SERVER['REQUEST_URI'], PHP_URL_QUERY) ?? '', $query);
+    $courseId = isset($query['course_id']) ? (int)$query['course_id'] : 0;
+
+    if ($courseId) {
+        // Get sessions for a specific course
+        $stmt = $conn->prepare("
+            SELECT s.id, s.course_id, s.token, s.expires_at, s.created_by_email, s.created_at,
+                   c.name AS course_name,
+                   (s.expires_at <= NOW()) AS is_expired,
+                   (SELECT COUNT(*) FROM attendance_logs al WHERE al.session_id = s.id) AS scanned_count,
+                   (SELECT COUNT(*) FROM enrollments e WHERE e.course_id = s.course_id) AS enrolled_count
+            FROM attendance_sessions s
+            JOIN courses c ON c.id = s.course_id
+            WHERE s.course_id = ?
+            ORDER BY s.id DESC
+        ");
+        if (!$stmt) {
+            sendResponse(['success' => false, 'message' => 'Database query preparation failed: ' . $conn->error], 500);
+        }
+        $stmt->bind_param("i", $courseId);
+    } else {
+        // Get all sessions across all courses
+        $stmt = $conn->prepare("
+            SELECT s.id, s.course_id, s.token, s.expires_at, s.created_by_email, s.created_at,
+                   c.name AS course_name,
+                   (s.expires_at <= NOW()) AS is_expired,
+                   (SELECT COUNT(*) FROM attendance_logs al WHERE al.session_id = s.id) AS scanned_count,
+                   (SELECT COUNT(*) FROM enrollments e WHERE e.course_id = s.course_id) AS enrolled_count
+            FROM attendance_sessions s
+            JOIN courses c ON c.id = s.course_id
+            ORDER BY s.id DESC
+        ");
+        if (!$stmt) {
+            sendResponse(['success' => false, 'message' => 'Database query preparation failed: ' . $conn->error], 500);
+        }
+    }
+    
+    if (!$stmt->execute()) {
+        sendResponse(['success' => false, 'message' => 'Database query execution failed: ' . $stmt->error], 500);
+    }
+    
+    $result = $stmt->get_result();
+    $rows = [];
+    while ($row = $result->fetch_assoc()) {
+        $rows[] = $row;
+    }
+    $stmt->close();
+
+    sendResponse(['success' => true, 'data' => $rows]);
+}
+
 if ($isAttendanceSession) {
     // Support GET (fetch latest active) and POST (create new)
     if (!in_array($method, ['GET', 'POST'], true)) {
@@ -169,41 +228,6 @@ if ($isAttendanceSession) {
         'token' => $token,
         'expires_at' => $expiresAt,
     ]]);
-}
-
-if ($isAttendanceSessionsList) {
-    if ($method !== 'GET') {
-        sendResponse(['success' => false, 'message' => 'Method not allowed'], 405);
-    }
-    requireRole(['admin', 'instructor'], $body);
-
-    parse_str(parse_url($_SERVER['REQUEST_URI'], PHP_URL_QUERY) ?? '', $query);
-    $courseId = isset($query['course_id']) ? (int)$query['course_id'] : 0;
-    if (!$courseId) {
-        sendResponse(['success' => false, 'message' => 'course_id is required'], 400);
-    }
-
-    $stmt = $conn->prepare("
-        SELECT s.id, s.course_id, s.token, s.expires_at, s.created_by_email, s.created_at,
-               c.name AS course_name,
-               (s.expires_at <= NOW()) AS is_expired,
-               (SELECT COUNT(*) FROM attendance_logs al WHERE al.session_id = s.id) AS scanned_count,
-               (SELECT COUNT(*) FROM enrollments e WHERE e.course_id = s.course_id) AS enrolled_count
-        FROM attendance_sessions s
-        JOIN courses c ON c.id = s.course_id
-        WHERE s.course_id = ?
-        ORDER BY s.id DESC
-    ");
-    $stmt->bind_param("i", $courseId);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $rows = [];
-    while ($row = $result->fetch_assoc()) {
-        $rows[] = $row;
-    }
-    $stmt->close();
-
-    sendResponse(['success' => true, 'data' => $rows]);
 }
 
 if ($isAttendanceAnalytics) {

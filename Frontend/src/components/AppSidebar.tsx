@@ -4,11 +4,9 @@ import {
   LayoutDashboard,
   BookOpen,
   Users,
-  Settings,
   LogOut,
-  FileText,
-  BarChart3,
   UserCircle,
+  CalendarClock,
 } from 'lucide-react'
 import {
   Sidebar,
@@ -55,19 +53,10 @@ const navItems: NavItem[] = [
     roles: ['admin', 'instructor'],
   },
   {
-    title: 'Reports',
-    href: '/dashboard/reports',
-    icon: BarChart3,
-  },
-  {
-    title: 'Documents',
-    href: '/dashboard/documents',
-    icon: FileText,
-  },
-  {
-    title: 'Settings',
-    href: '/dashboard/settings',
-    icon: Settings,
+    title: 'Sessions',
+    href: '/dashboard/sessions',
+    icon: CalendarClock,
+    roles: ['admin', 'instructor'],
   },
 ]
 
