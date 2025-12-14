@@ -22,7 +22,19 @@ if (!is_array($body)) {
 $conn = db();
 
 // Detect instructor/student list requests
-parse_str(parse_url($_SERVER['REQUEST_URI'], PHP_URL_QUERY) ?? '', $queryParams);
+// Parse query params from multiple sources
+$queryParams = [];
+// First try $_GET (populated by index.php router)
+if (!empty($_GET)) {
+    $queryParams = $_GET;
+} else {
+    // Fallback: parse from REQUEST_URI
+    $queryString = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_QUERY);
+    if ($queryString) {
+        parse_str($queryString, $queryParams);
+    }
+}
+
 $isInstructorList = strpos($_SERVER['REQUEST_URI'], '/courses/instructors') !== false
     || strpos($_SERVER['REQUEST_URI'], '/courses/instructors.php') !== false
     || isset($queryParams['instructors'])
@@ -38,6 +50,48 @@ if ($isInstructorList) {
     if ($method !== 'GET') {
         sendResponse(['success' => false, 'message' => 'Method not allowed'], 405);
     }
+    // Parse query string to get role - use $queryParams first (already populated above for detection)
+    $role = null;
+    
+    // Check $queryParams first (already has $_GET or parsed from REQUEST_URI)
+    if (isset($queryParams['requested_by_role']) && !empty($queryParams['requested_by_role'])) {
+        $role = trim((string)$queryParams['requested_by_role']);
+        // Remove any .php extension that might have been accidentally included
+        $role = preg_replace('/\.php$/', '', $role);
+    }
+    // Fallback to $_GET (should be populated by index.php)
+    elseif (isset($_GET['requested_by_role']) && !empty($_GET['requested_by_role'])) {
+        $role = trim((string)$_GET['requested_by_role']);
+        // Remove any .php extension that might have been accidentally included
+        $role = preg_replace('/\.php$/', '', $role);
+    }
+    // Final fallback: parse from REQUEST_URI
+    else {
+        $queryString = parse_url($_SERVER['REQUEST_URI'], PHP_URL_QUERY);
+        if ($queryString) {
+            parse_str($queryString, $query);
+            if (isset($query['requested_by_role']) && !empty($query['requested_by_role'])) {
+                $role = trim((string)$query['requested_by_role']);
+                // Remove any .php extension that might have been accidentally included
+                $role = preg_replace('/\.php$/', '', $role);
+            }
+        }
+    }
+    
+    // Ensure $body is an array
+    if (!is_array($body)) {
+        $body = [];
+    }
+    
+    // Add role to body for requireRole function
+    // Also ensure $_GET has it as a fallback for requireRole
+    if ($role) {
+        $body['requested_by_role'] = $role;
+        if (!isset($_GET['requested_by_role'])) {
+            $_GET['requested_by_role'] = $role;
+        }
+    }
+    
     requireRole(['admin', 'instructor'], $body);
 
     $stmt = $conn->prepare("SELECT id, name, email FROM users WHERE role = 'instructor' ORDER BY name ASC");
@@ -56,6 +110,48 @@ if ($isStudentsList) {
     if ($method !== 'GET') {
         sendResponse(['success' => false, 'message' => 'Method not allowed'], 405);
     }
+    // Parse query string to get role - use $queryParams first (already populated above for detection)
+    $role = null;
+    
+    // Check $queryParams first (already has $_GET or parsed from REQUEST_URI)
+    if (isset($queryParams['requested_by_role']) && !empty($queryParams['requested_by_role'])) {
+        $role = trim((string)$queryParams['requested_by_role']);
+        // Remove any .php extension that might have been accidentally included
+        $role = preg_replace('/\.php$/', '', $role);
+    }
+    // Fallback to $_GET (should be populated by index.php)
+    elseif (isset($_GET['requested_by_role']) && !empty($_GET['requested_by_role'])) {
+        $role = trim((string)$_GET['requested_by_role']);
+        // Remove any .php extension that might have been accidentally included
+        $role = preg_replace('/\.php$/', '', $role);
+    }
+    // Final fallback: parse from REQUEST_URI
+    else {
+        $queryString = parse_url($_SERVER['REQUEST_URI'], PHP_URL_QUERY);
+        if ($queryString) {
+            parse_str($queryString, $query);
+            if (isset($query['requested_by_role']) && !empty($query['requested_by_role'])) {
+                $role = trim((string)$query['requested_by_role']);
+                // Remove any .php extension that might have been accidentally included
+                $role = preg_replace('/\.php$/', '', $role);
+            }
+        }
+    }
+    
+    // Ensure $body is an array
+    if (!is_array($body)) {
+        $body = [];
+    }
+    
+    // Add role to body for requireRole function
+    // Also ensure $_GET has it as a fallback for requireRole
+    if ($role) {
+        $body['requested_by_role'] = $role;
+        if (!isset($_GET['requested_by_role'])) {
+            $_GET['requested_by_role'] = $role;
+        }
+    }
+    
     requireRole(['admin', 'instructor'], $body);
 
     $stmt = $conn->prepare("SELECT id, name, email FROM users WHERE role = 'student' ORDER BY name ASC");
@@ -72,7 +168,15 @@ if ($isStudentsList) {
 // Handle courses CRUD operations
 switch ($method) {
     case 'GET':
-        parse_str(parse_url($_SERVER['REQUEST_URI'], PHP_URL_QUERY) ?? '', $query);
+        // Parse query string - use $queryParams if already parsed, otherwise parse from URI
+        $query = $queryParams;
+        if (empty($query)) {
+            parse_str(parse_url($_SERVER['REQUEST_URI'], PHP_URL_QUERY) ?? '', $query);
+        }
+        // Also ensure role is in body for requireRole if needed
+        if (isset($query['requested_by_role'])) {
+            $body['requested_by_role'] = $query['requested_by_role'];
+        }
         
         // Check if requesting a specific course by ID
         if (isset($query['id'])) {

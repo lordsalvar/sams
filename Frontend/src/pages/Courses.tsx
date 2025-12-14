@@ -161,9 +161,11 @@ export default function Courses() {
       } else {
         alert(res.data?.message || 'Failed to load instructors')
       }
-    } catch (err) {
-      console.error(err)
-      alert('Failed to load instructors')
+    } catch (err: any) {
+      console.error('Error loading instructors:', err)
+      console.error('Response data:', err?.response?.data)
+      const errorMessage = err?.response?.data?.message || err?.message || 'Failed to load instructors'
+      alert(`Failed to load instructors: ${errorMessage}`)
     }
   }
 

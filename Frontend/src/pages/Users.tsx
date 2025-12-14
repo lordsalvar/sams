@@ -97,9 +97,16 @@ export default function Users() {
       } else {
         alert(res.data?.message || 'Failed to load users')
       }
-    } catch (err) {
-      console.error(err)
-      alert('Failed to load users')
+    } catch (err: any) {
+      console.error('Failed to load users', err)
+      const errorMessage = err?.response?.data?.message || err?.message || 'Failed to load users'
+      console.error('Error details:', {
+        status: err?.response?.status,
+        message: errorMessage,
+        url: err?.config?.url,
+        params: err?.config?.params
+      })
+      alert(errorMessage)
     } finally {
       setLoading(false)
     }

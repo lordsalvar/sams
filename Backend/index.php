@@ -12,10 +12,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 // Get the request URI and method
-$requestUri = $_SERVER['REQUEST_URI'];
-$requestMethod = $_SERVER['REQUEST_METHOD'];
+$requestUri = $_SERVER['REQUEST_URI'] ?? '';
+$requestMethod = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
-// Remove query string from URI
+// Parse query string and ensure $_GET is populated
+// This is important because when requests go through proxy/router, $_GET might not be auto-populated
+$queryString = parse_url($requestUri, PHP_URL_QUERY);
+if ($queryString) {
+    // Merge with existing $_GET to avoid overwriting
+    parse_str($queryString, $parsedQuery);
+    $_GET = array_merge($_GET, $parsedQuery);
+}
+
+// Remove query string from URI for routing
 $uri = parse_url($requestUri, PHP_URL_PATH);
 
 // Remove base path if needed
@@ -34,6 +43,8 @@ $routes = [
     'GET' => [
         '/test' => 'api/test.php',
         '/test.php' => 'api/test.php',
+        '/users' => 'api/users.php',
+        '/users.php' => 'api/users.php',
         '/courses' => 'api/courses.php',
         '/courses.php' => 'api/courses.php',
         '/courses/instructors' => 'api/courses.php',
@@ -48,6 +59,8 @@ $routes = [
     'POST' => [
         '/auth/login' => 'api/auth/login.php',
         '/auth/login.php' => 'api/auth/login.php',
+        '/users' => 'api/users.php',
+        '/users.php' => 'api/users.php',
         '/courses' => 'api/courses.php',
         '/courses.php' => 'api/courses.php',
         '/courses/enroll' => 'api/enrollments.php',
@@ -56,10 +69,14 @@ $routes = [
         '/courses/attendance-scan' => 'api/attendance/scan.php',
     ],
     'PUT' => [
+        '/users' => 'api/users.php',
+        '/users.php' => 'api/users.php',
         '/courses' => 'api/courses.php',
         '/courses.php' => 'api/courses.php',
     ],
     'DELETE' => [
+        '/users' => 'api/users.php',
+        '/users.php' => 'api/users.php',
         '/courses' => 'api/courses.php',
         '/courses.php' => 'api/courses.php',
         '/courses/unenroll' => 'api/enrollments.php',
