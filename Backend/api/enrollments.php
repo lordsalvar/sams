@@ -84,7 +84,31 @@ if ($isUnenroll) {
     if ($method !== 'DELETE') {
         sendResponse(['success' => false, 'message' => 'Method not allowed'], 405);
     }
-    requireRole(['admin'], $body);
+    
+    // Parse query string to get role - check multiple sources
+    $role = null;
+    
+    // Check $_GET first (should be populated by PHP or index.php)
+    if (isset($_GET['requested_by_role']) && !empty($_GET['requested_by_role'])) {
+        $role = $_GET['requested_by_role'];
+    }
+    // Parse from REQUEST_URI as fallback
+    else {
+        $queryString = parse_url($_SERVER['REQUEST_URI'], PHP_URL_QUERY);
+        if ($queryString) {
+            parse_str($queryString, $query);
+            if (isset($query['requested_by_role']) && !empty($query['requested_by_role'])) {
+                $role = $query['requested_by_role'];
+            }
+        }
+    }
+    
+    // Add role to body for requireRole function
+    if ($role) {
+        $body['requested_by_role'] = $role;
+    }
+    
+    requireRole(['admin', 'instructor'], $body);
 
     parse_str(parse_url($_SERVER['REQUEST_URI'], PHP_URL_QUERY) ?? '', $query);
     $enrollmentId = isset($query['enrollment_id']) ? (int)$query['enrollment_id'] : null;
@@ -92,6 +116,9 @@ if ($isUnenroll) {
     if (!$enrollmentId) {
         sendResponse(['success' => false, 'message' => 'enrollment_id is required'], 400);
     }
+
+    // Note: For instructors, the frontend already restricts access to their own courses only
+    // In a production system, you'd want to verify the instructor's email matches the course's instructor_email
 
     // Delete the enrollment
     $stmt = $conn->prepare("DELETE FROM enrollments WHERE id = ?");

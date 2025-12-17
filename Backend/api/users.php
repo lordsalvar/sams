@@ -155,6 +155,29 @@ switch ($method) {
 
     case 'DELETE':
         // Only admins can delete users
+        // Parse query string to get role - check multiple sources
+        $role = null;
+        
+        // Check $_GET first (should be populated by PHP or index.php)
+        if (isset($_GET['requested_by_role']) && !empty($_GET['requested_by_role'])) {
+            $role = $_GET['requested_by_role'];
+        }
+        // Parse from REQUEST_URI as fallback
+        else {
+            $queryString = parse_url($_SERVER['REQUEST_URI'], PHP_URL_QUERY);
+            if ($queryString) {
+                parse_str($queryString, $query);
+                if (isset($query['requested_by_role']) && !empty($query['requested_by_role'])) {
+                    $role = $query['requested_by_role'];
+                }
+            }
+        }
+        
+        // Add role to body for requireRole function
+        if ($role) {
+            $body['requested_by_role'] = $role;
+        }
+        
         requireRole(['admin'], $body);
         
         parse_str(parse_url($_SERVER['REQUEST_URI'], PHP_URL_QUERY) ?? '', $query);

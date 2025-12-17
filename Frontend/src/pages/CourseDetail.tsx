@@ -305,10 +305,14 @@ export default function CourseDetail() {
 
   const handleUnenroll = async (enrollmentId: number, studentName: string) => {
     if (!confirm(`Remove ${studentName} from this course?`)) return
+    if (!user) return
     
     try {
       await api.delete('/courses/unenroll', {
-        params: { enrollment_id: enrollmentId }
+        params: { 
+          enrollment_id: enrollmentId,
+          requested_by_role: user.role
+        }
       })
       await loadCourseDetail()
     } catch (err: any) {
