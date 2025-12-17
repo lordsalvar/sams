@@ -231,7 +231,7 @@ Complete end-to-end testing guide from user creation to attendance recording.
 
 ## Phase 6: View Attendance Records
 
-### 6.1 View Session Roster (as Instructor)
+### 6.1 View Session Attendees (as Instructor)
 - [ ] Login as instructor
 - [ ] Navigate to course details
 - [ ] Go to "Attendance Sessions" tab

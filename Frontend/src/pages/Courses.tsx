@@ -119,6 +119,14 @@ export default function Courses() {
     }
   }, [navigate])
 
+  // Reload available students when enroll dialog opens
+  useEffect(() => {
+    if (enrollDialogOpen && enrollCourse && user) {
+      loadAvailableStudents()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enrollDialogOpen])
+
   const loadCourses = async (userData?: { role: string; email?: string; name?: string }) => {
     setLoading(true)
     try {
@@ -169,10 +177,12 @@ export default function Courses() {
     }
   }
 
-  const loadAvailableStudents = async () => {
-    if (!user || !enrollCourse) return
+  const loadAvailableStudents = async (course?: Course | null) => {
+    const targetCourse = course || enrollCourse
+    if (!user || !targetCourse) return
     setLoadingStudents(true)
     try {
+      // Load all students
       const res = await api.get('/courses', {
         params: { list: 'students', requested_by_role: user.role },
       })
@@ -181,22 +191,37 @@ export default function Courses() {
         setAllStudentsCount(allStudents.length)
         
         // Get currently enrolled students for this specific course
-        const courseDetailRes = await api.get('/courses', {
-          params: { id: enrollCourse.id }
-        })
-        
-        if (courseDetailRes.data?.success) {
-          const enrolledEmails = new Set(
-            (courseDetailRes.data.data.students || []).map((s: any) => s.student_email)
-          )
-          const availableOnly = allStudents.filter((student: Student) => !enrolledEmails.has(student.email))
-          setAvailableStudents(availableOnly)
-        } else {
+        try {
+          const courseDetailRes = await api.get('/courses', {
+            params: { id: targetCourse.id }
+          })
+          
+          if (courseDetailRes.data?.success && courseDetailRes.data.data) {
+            // Handle both possible data structures
+            const courseData = courseDetailRes.data.data
+            const students = courseData.students || courseData.data?.students || []
+            const enrolledEmails = new Set(
+              students.map((s: any) => s.student_email || s.email)
+            )
+            const availableOnly = allStudents.filter((student: Student) => !enrolledEmails.has(student.email))
+            setAvailableStudents(availableOnly)
+          } else {
+            // If course detail fetch fails, show all students
+            setAvailableStudents(allStudents)
+          }
+        } catch (courseErr) {
+          console.error('Failed to load course details for enrollment:', courseErr)
+          // If course detail fetch fails, show all students
           setAvailableStudents(allStudents)
         }
+      } else {
+        setAvailableStudents([])
+        setAllStudentsCount(0)
       }
     } catch (err) {
-      console.error(err)
+      console.error('Failed to load students:', err)
+      setAvailableStudents([])
+      setAllStudentsCount(0)
     } finally {
       setLoadingStudents(false)
     }
@@ -283,7 +308,7 @@ export default function Courses() {
 
   const handleEnroll = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!enrollCourse || !user) return
+    if (!enrollCourse || !user || !enrollEmail.trim()) return
     try {
       await api.post('/courses/enroll', {
         course_id: enrollCourse.id,
@@ -293,6 +318,7 @@ export default function Courses() {
       setEnrollDialogOpen(false)
       setEnrollEmail('')
       setEnrollCourse(null)
+      setAvailableStudents([])
       await loadCourses()
     } catch (err: any) {
       console.error(err)
@@ -418,7 +444,7 @@ export default function Courses() {
                                     onClick={async () => {
                                       setEnrollCourse(course)
                                       setEnrollEmail('')
-                                      await loadAvailableStudents()
+                                      await loadAvailableStudents(course)
                                       setEnrollDialogOpen(true)
                                     }}
                                   >
@@ -442,7 +468,7 @@ export default function Courses() {
                                     onClick={async () => {
                                       setEnrollCourse(course)
                                       setEnrollEmail('')
-                                      await loadAvailableStudents()
+                                      await loadAvailableStudents(course)
                                       setEnrollDialogOpen(true)
                                     }}
                                   >
@@ -532,7 +558,20 @@ export default function Courses() {
       </Dialog>
 
       {/* Enroll student dialog */}
-      <Dialog open={enrollDialogOpen} onOpenChange={setEnrollDialogOpen}>
+      <Dialog 
+        open={enrollDialogOpen} 
+        onOpenChange={(open) => {
+          setEnrollDialogOpen(open)
+          if (!open) {
+            // Reset state when dialog closes
+            setEnrollEmail('')
+            setEnrollCourse(null)
+            setAvailableStudents([])
+            setAllStudentsCount(0)
+            setStudentComboOpen(false)
+          }
+        }}
+      >
         <DialogContent className="sm:max-w-[420px]">
           <DialogHeader>
             <DialogTitle>Enroll Student</DialogTitle>

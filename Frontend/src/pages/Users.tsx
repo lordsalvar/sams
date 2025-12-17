@@ -146,7 +146,12 @@ export default function Users() {
     }
 
     try {
-      await api.delete('/users', { params: { id: userId } })
+      await api.delete('/users', { 
+        params: { 
+          id: userId,
+          requested_by_role: user?.role 
+        } 
+      })
       await loadUsers()
     } catch (err: any) {
       console.error(err)
