@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
+import { Button } from '../components/ui/button'
 import { DashboardLayout } from '../components/DashboardLayout'
+import { Users, BookOpen, CalendarClock, ArrowRight } from 'lucide-react'
 
 interface User {
   id: number
@@ -91,9 +93,47 @@ export default function Dashboard() {
               <CardDescription>Common tasks and shortcuts</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Quick actions will be available here.
-              </p>
+              <div className="space-y-2">
+                {user.role.toLowerCase() === 'admin' && (
+                  <Button
+                    variant="outline"
+                    className="w-full justify-between"
+                    onClick={() => navigate('/dashboard/users')}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4" />
+                      <span>Users</span>
+                    </div>
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
+                )}
+                {['admin', 'instructor', 'student'].includes(user.role.toLowerCase()) && (
+                  <>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-between"
+                      onClick={() => navigate('/dashboard/courses')}
+                    >
+                      <div className="flex items-center gap-2">
+                        <BookOpen className="h-4 w-4" />
+                        <span>Courses</span>
+                      </div>
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-between"
+                      onClick={() => navigate('/dashboard/sessions')}
+                    >
+                      <div className="flex items-center gap-2">
+                        <CalendarClock className="h-4 w-4" />
+                        <span>Sessions</span>
+                      </div>
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </>
+                )}
+              </div>
             </CardContent>
           </Card>
 

@@ -50,13 +50,13 @@ const navItems: NavItem[] = [
     title: 'Courses',
     href: '/dashboard/courses',
     icon: BookOpen,
-    roles: ['admin', 'instructor'],
+    roles: ['admin', 'instructor', 'student'],
   },
   {
     title: 'Sessions',
     href: '/dashboard/sessions',
     icon: CalendarClock,
-    roles: ['admin', 'instructor'],
+    roles: ['admin', 'instructor', 'student'],
   },
 ]
 

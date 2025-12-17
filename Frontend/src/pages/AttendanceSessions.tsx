@@ -50,10 +50,7 @@ export default function AttendanceSessions() {
     const parsed = JSON.parse(storedUser)
     setUser(parsed)
 
-    if (!['admin', 'instructor'].includes(parsed.role.toLowerCase())) {
-      navigate('/dashboard')
-      return
-    }
+    // All authenticated users can view sessions (students only for enrolled courses)
   }, [navigate])
 
   useEffect(() => {
@@ -67,12 +64,17 @@ export default function AttendanceSessions() {
     if (!courseId || !user) return
     setLoading(true)
     try {
-      const res = await api.get('/courses/attendance-sessions', {
-        params: {
-          course_id: Number(courseId),
-          requested_by_role: user.role,
-        }
-      })
+      const params: any = {
+        course_id: Number(courseId),
+        requested_by_role: user.role,
+      }
+      
+      // Add student_email for students
+      if (user.role.toLowerCase() === 'student' && user.email) {
+        params.student_email = user.email
+      }
+      
+      const res = await api.get('/courses/attendance-sessions', { params })
       if (res.data?.success) {
         setSessions(res.data.data || [])
         if (res.data.data?.length) {
@@ -82,8 +84,9 @@ export default function AttendanceSessions() {
           setRoster([])
         }
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to load sessions', err)
+      alert(err?.response?.data?.message || 'Failed to load sessions')
     } finally {
       setLoading(false)
     }
@@ -96,6 +99,11 @@ export default function AttendanceSessions() {
 
   const loadRoster = async (session: SessionRow) => {
     if (!user) return
+    // Students don't need to see the full roster
+    if (user.role.toLowerCase() === 'student') {
+      setRoster([])
+      return
+    }
     setRosterLoading(true)
     try {
       const res = await api.get('/courses/attendance-logs', {
@@ -197,89 +205,129 @@ export default function AttendanceSessions() {
           </CardContent>
         </Card>
 
-        <Card className="h-full">
-          <CardHeader className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Session Attendees
-            </CardTitle>
-            {selectedSession && (
-              <Badge variant="outline">
-                {presentCount}/{enrolledCount || '—'} present
-              </Badge>
-            )}
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {!selectedSession ? (
-              <div className="text-muted-foreground text-sm">Select a session to view attendance.</div>
-            ) : rosterLoading ? (
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Loading roster...
-              </div>
-            ) : roster.length === 0 ? (
-              <div className="text-muted-foreground text-sm">No enrolled students or no scans yet.</div>
-            ) : (
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Student</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Scanned At</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {roster.map((r) => (
-                      <TableRow key={r.student_id}>
-                        <TableCell>{r.student_name}</TableCell>
-                        <TableCell>{r.student_email}</TableCell>
-                        <TableCell>
-                          {r.present === 1 ? (
-                            <span className="flex items-center gap-1 text-green-600">
-                              <CheckCircle2 className="h-4 w-4" />
-                              Present
-                            </span>
-                          ) : (
-                            <span className="flex items-center gap-1 text-muted-foreground">
-                              <XCircle className="h-4 w-4" />
-                              Absent
-                            </span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {r.scanned_at ? new Date(r.scanned_at).toLocaleString() : '—'}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-            {selectedSession && (
-              <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
-                <Badge variant={selectedSession.is_expired ? 'destructive' : 'secondary'}>
-                  {selectedSession.is_expired ? 'Expired' : 'Active'}
-                </Badge>
-                <span>Created: {new Date(selectedSession.created_at).toLocaleString()}</span>
-                <span>Expires: {new Date(selectedSession.expires_at).toLocaleString()}</span>
-              </div>
-            )}
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => navigate(-1)}>Back</Button>
+        {user?.role.toLowerCase() !== 'student' && (
+          <Card className="h-full">
+            <CardHeader className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Session Attendees
+              </CardTitle>
               {selectedSession && (
-                <Button
-                  variant="secondary"
-                  onClick={() => navigate(`/dashboard/courses/${selectedSession.course_id}/attendance-display`)}
-                >
-                  <QrCode className="mr-2 h-4 w-4" />
-                  Show QR
-                </Button>
+                <Badge variant="outline">
+                  {presentCount}/{enrolledCount || '—'} present
+                </Badge>
               )}
-            </div>
-          </CardContent>
-        </Card>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {!selectedSession ? (
+                <div className="text-muted-foreground text-sm">Select a session to view attendance.</div>
+              ) : rosterLoading ? (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading roster...
+                </div>
+              ) : roster.length === 0 ? (
+                <div className="text-muted-foreground text-sm">No enrolled students or no scans yet.</div>
+              ) : (
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Student</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Scanned At</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {roster.map((r) => (
+                        <TableRow key={r.student_id}>
+                          <TableCell>{r.student_name}</TableCell>
+                          <TableCell>{r.student_email}</TableCell>
+                          <TableCell>
+                            {r.present === 1 ? (
+                              <span className="flex items-center gap-1 text-green-600">
+                                <CheckCircle2 className="h-4 w-4" />
+                                Present
+                              </span>
+                            ) : (
+                              <span className="flex items-center gap-1 text-muted-foreground">
+                                <XCircle className="h-4 w-4" />
+                                Absent
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {r.scanned_at ? new Date(r.scanned_at).toLocaleString() : '—'}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+              {selectedSession && (
+                <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
+                  <Badge variant={selectedSession.is_expired ? 'destructive' : 'secondary'}>
+                    {selectedSession.is_expired ? 'Expired' : 'Active'}
+                  </Badge>
+                  <span>Created: {new Date(selectedSession.created_at).toLocaleString()}</span>
+                  <span>Expires: {new Date(selectedSession.expires_at).toLocaleString()}</span>
+                </div>
+              )}
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => navigate(-1)}>Back</Button>
+                {selectedSession && ['admin', 'instructor'].includes(user?.role.toLowerCase() || '') && (
+                  <Button
+                    variant="secondary"
+                    onClick={() => navigate(`/dashboard/courses/${selectedSession.course_id}/attendance-display`)}
+                  >
+                    <QrCode className="mr-2 h-4 w-4" />
+                    Show QR
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+        
+        {user?.role.toLowerCase() === 'student' && (
+          <Card className="h-full">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CalendarClock className="h-5 w-5" />
+                Session Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {!selectedSession ? (
+                <div className="text-muted-foreground text-sm">Select a session to view details.</div>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Status</p>
+                      <Badge variant={selectedSession.is_expired ? 'destructive' : 'secondary'} className="mt-1">
+                        {selectedSession.is_expired ? 'Expired' : 'Active'}
+                      </Badge>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Created</p>
+                      <p className="text-sm">{new Date(selectedSession.created_at).toLocaleString()}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Expires</p>
+                      <p className="text-sm">{new Date(selectedSession.expires_at).toLocaleString()}</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" onClick={() => navigate(-1)}>Back</Button>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
     </DashboardLayout>
   )

@@ -107,12 +107,7 @@ export default function Courses() {
     const userData = JSON.parse(userStr)
     setUser(userData)
 
-    // Only admins and instructors can view courses
-    if (!['admin', 'instructor'].includes(userData.role.toLowerCase())) {
-      navigate('/dashboard')
-      return
-    }
-
+    // All authenticated users can view courses (students see only enrolled courses)
     loadCourses(userData)
     if (userData.role.toLowerCase() === 'admin') {
       loadInstructors(userData.role)
@@ -136,12 +131,18 @@ export default function Courses() {
         userData = userStr ? JSON.parse(userStr) : null
       }
       
-      const params: any = {}
+      const params: any = {
+        requested_by_role: userData?.role || ''
+      }
       
       // If instructor, filter by their email
       if (userData?.role.toLowerCase() === 'instructor' && userData?.email) {
-        params.requested_by_role = userData.role
         params.instructor_email = userData.email
+      }
+      
+      // If student, filter by their email to get only enrolled courses
+      if (userData?.role.toLowerCase() === 'student' && userData?.email) {
+        params.student_email = userData.email
       }
       
       const res = await api.get('/courses', { params })
@@ -345,11 +346,14 @@ export default function Courses() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">
-              {user?.role.toLowerCase() === 'admin' ? 'Courses' : 'My Courses'}
+              {user?.role.toLowerCase() === 'admin' ? 'Courses' : 
+               user?.role.toLowerCase() === 'student' ? 'My Courses' : 'My Courses'}
             </h1>
             <p className="text-muted-foreground">
               {user?.role.toLowerCase() === 'admin' 
                 ? 'Manage courses and assign instructors.' 
+                : user?.role.toLowerCase() === 'student'
+                ? 'View your enrolled courses and attendance sessions.'
                 : 'Manage your assigned courses and enrolled students.'}
             </p>
           </div>
@@ -364,11 +368,14 @@ export default function Courses() {
         <Card>
           <CardHeader>
             <CardTitle>
-              {user?.role.toLowerCase() === 'admin' ? 'All Courses' : 'Your Courses'}
+              {user?.role.toLowerCase() === 'admin' ? 'All Courses' : 
+               user?.role.toLowerCase() === 'student' ? 'Enrolled Courses' : 'Your Courses'}
             </CardTitle>
             <CardDescription>
               {user?.role.toLowerCase() === 'admin'
                 ? 'Courses currently available in the system.'
+                : user?.role.toLowerCase() === 'student'
+                ? 'Courses you are currently enrolled in.'
                 : 'Courses you are currently teaching.'}
             </CardDescription>
           </CardHeader>
@@ -433,6 +440,12 @@ export default function Courses() {
                                 <Eye className="mr-2 h-4 w-4" />
                                 View Details
                               </DropdownMenuItem>
+                              {user?.role.toLowerCase() === 'student' && (
+                                <DropdownMenuItem onClick={() => navigate(`/dashboard/courses/${course.id}/attendance-sessions`)}>
+                                  <Eye className="mr-2 h-4 w-4" />
+                                  View Sessions
+                                </DropdownMenuItem>
+                              )}
                               {user?.role.toLowerCase() === 'admin' && (
                                 <>
                                   <DropdownMenuSeparator />
