@@ -30,10 +30,38 @@ if ($isAttendanceSessionsList) {
     if ($method !== 'GET') {
         sendResponse(['success' => false, 'message' => 'Method not allowed'], 405);
     }
-    requireRole(['admin', 'instructor'], $body);
-
+    
+    // Parse query string to get role
     parse_str(parse_url($_SERVER['REQUEST_URI'], PHP_URL_QUERY) ?? '', $query);
+    $requestedByRole = isset($query['requested_by_role']) ? strtolower(trim((string)$query['requested_by_role'])) : '';
+    $studentEmail = isset($query['student_email']) ? trim((string)$query['student_email']) : '';
+    
+    // Add role to body for requireRole function
+    if ($requestedByRole) {
+        $body['requested_by_role'] = $requestedByRole;
+    }
+    
+    requireRole(['admin', 'instructor', 'student'], $body);
+
     $courseId = isset($query['course_id']) ? (int)$query['course_id'] : 0;
+    
+    // For students, verify they are enrolled in the course
+    if ($requestedByRole === 'student' && $courseId > 0 && !empty($studentEmail)) {
+        $conn = db();
+        $stmt = $conn->prepare("
+            SELECT e.id FROM enrollments e
+            JOIN users u ON u.id = e.student_id
+            WHERE e.course_id = ? AND u.email = ?
+        ");
+        $stmt->bind_param("is", $courseId, $studentEmail);
+        $stmt->execute();
+        $enrollmentResult = $stmt->get_result();
+        if ($enrollmentResult->num_rows === 0) {
+            $stmt->close();
+            sendResponse(['success' => false, 'message' => 'You are not enrolled in this course'], 403);
+        }
+        $stmt->close();
+    }
 
     if ($courseId) {
         // Get sessions for a specific course
@@ -88,13 +116,45 @@ if ($isAttendanceSession) {
     if (!in_array($method, ['GET', 'POST'], true)) {
         sendResponse(['success' => false, 'message' => 'Method not allowed'], 405);
     }
-    requireRole(['admin', 'instructor'], $body);
+    
+    // Parse query string to get role
+    parse_str(parse_url($_SERVER['REQUEST_URI'], PHP_URL_QUERY) ?? '', $query);
+    $requestedByRole = isset($query['requested_by_role']) ? strtolower(trim((string)$query['requested_by_role'])) : '';
+    $studentEmail = isset($query['student_email']) ? trim((string)$query['student_email']) : '';
+    
+    // Add role to body for requireRole function
+    if ($requestedByRole) {
+        $body['requested_by_role'] = $requestedByRole;
+    }
+    
+    // Only allow GET for students, POST requires admin/instructor
+    if ($method === 'POST') {
+        requireRole(['admin', 'instructor'], $body);
+    } else {
+        requireRole(['admin', 'instructor', 'student'], $body);
+    }
 
     if ($method === 'GET') {
-        parse_str(parse_url($_SERVER['REQUEST_URI'], PHP_URL_QUERY) ?? '', $query);
         $courseId = isset($query['course_id']) ? (int)$query['course_id'] : 0;
         if (!$courseId) {
             sendResponse(['success' => false, 'message' => 'course_id is required'], 400);
+        }
+        
+        // For students, verify they are enrolled in the course
+        if ($requestedByRole === 'student' && !empty($studentEmail)) {
+            $stmt = $conn->prepare("
+                SELECT e.id FROM enrollments e
+                JOIN users u ON u.id = e.student_id
+                WHERE e.course_id = ? AND u.email = ?
+            ");
+            $stmt->bind_param("is", $courseId, $studentEmail);
+            $stmt->execute();
+            $enrollmentResult = $stmt->get_result();
+            if ($enrollmentResult->num_rows === 0) {
+                $stmt->close();
+                sendResponse(['success' => false, 'message' => 'You are not enrolled in this course'], 403);
+            }
+            $stmt->close();
         }
 
         $stmt = $conn->prepare("

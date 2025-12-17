@@ -49,10 +49,7 @@ export default function AllSessions() {
     const parsed = JSON.parse(storedUser)
     setUser(parsed)
 
-    if (!['admin', 'instructor'].includes(parsed.role.toLowerCase())) {
-      navigate('/dashboard')
-      return
-    }
+    // All authenticated users can view sessions (students see only enrolled courses)
   }, [navigate])
 
   useEffect(() => {
@@ -66,16 +63,53 @@ export default function AllSessions() {
     if (!user) return
     setLoading(true)
     try {
-      const res = await api.get('/courses/attendance-sessions', {
-        params: {
-          requested_by_role: user.role,
-          // No course_id - will fetch all sessions
+      // For students, first get their enrolled courses, then get sessions for those courses
+      if (user.role.toLowerCase() === 'student' && user.email) {
+        // Get enrolled courses
+        const coursesRes = await api.get('/courses', {
+          params: {
+            requested_by_role: user.role,
+            student_email: user.email,
+          }
+        })
+        
+        if (coursesRes.data?.success && coursesRes.data.data?.length > 0) {
+          const enrolledCourses = coursesRes.data.data
+          // Get sessions for each enrolled course
+          const allSessions: SessionRow[] = []
+          for (const course of enrolledCourses) {
+            try {
+              const sessionsRes = await api.get('/courses/attendance-sessions', {
+                params: {
+                  course_id: course.id,
+                  requested_by_role: user.role,
+                  student_email: user.email,
+                }
+              })
+              if (sessionsRes.data?.success && sessionsRes.data.data) {
+                allSessions.push(...sessionsRes.data.data)
+              }
+            } catch (err) {
+              console.error(`Failed to load sessions for course ${course.id}:`, err)
+            }
+          }
+          setSessions(allSessions)
+        } else {
+          setSessions([])
         }
-      })
-      if (res.data?.success) {
-        setSessions(res.data.data || [])
       } else {
-        console.error('API returned unsuccessful response:', res.data)
+        // Admin and instructor can see all sessions
+        const res = await api.get('/courses/attendance-sessions', {
+          params: {
+            requested_by_role: user.role,
+            // No course_id - will fetch all sessions
+          }
+        })
+        if (res.data?.success) {
+          setSessions(res.data.data || [])
+        } else {
+          console.error('API returned unsuccessful response:', res.data)
+        }
       }
     } catch (err: any) {
       console.error('Failed to load sessions', err)
@@ -89,6 +123,11 @@ export default function AllSessions() {
 
   const loadAttendanceLogs = async (sessionId: number) => {
     if (!user || attendanceLogs[sessionId]) return // Already loaded
+    
+    // Students shouldn't see other students' attendance logs
+    if (user.role.toLowerCase() === 'student') {
+      return
+    }
     
     setLoadingLogs(prev => new Set(prev).add(sessionId))
     try {
@@ -141,7 +180,7 @@ export default function AllSessions() {
         <CardHeader className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <CalendarClock className="h-5 w-5" />
-            All Attendance Sessions
+            {user?.role.toLowerCase() === 'student' ? 'My Attendance Sessions' : 'All Attendance Sessions'}
           </CardTitle>
           <Button variant="outline" size="sm" onClick={loadSessions} disabled={loading}>
             <RefreshCw className="mr-2 h-4 w-4" />
@@ -184,18 +223,20 @@ export default function AllSessions() {
                       <>
                         <TableRow key={s.id} className="cursor-pointer hover:bg-muted/50">
                           <TableCell>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0"
-                              onClick={() => toggleSession(s.id)}
-                            >
-                              {isExpanded ? (
-                                <ChevronDown className="h-4 w-4" />
-                              ) : (
-                                <ChevronRight className="h-4 w-4" />
-                              )}
-                            </Button>
+                            {user?.role.toLowerCase() !== 'student' && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0"
+                                onClick={() => toggleSession(s.id)}
+                              >
+                                {isExpanded ? (
+                                  <ChevronDown className="h-4 w-4" />
+                                ) : (
+                                  <ChevronRight className="h-4 w-4" />
+                                )}
+                              </Button>
+                            )}
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">

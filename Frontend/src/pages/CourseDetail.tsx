@@ -114,12 +114,7 @@ export default function CourseDetail() {
     const userData = JSON.parse(userStr)
     setUser(userData)
 
-    // Only admins and instructors can view course details
-    if (!['admin', 'instructor'].includes(userData.role.toLowerCase())) {
-      navigate('/dashboard')
-      return
-    }
-
+    // All authenticated users can view course details (students only for enrolled courses)
     loadCourseDetail()
   }, [navigate, courseId])
 
@@ -133,9 +128,17 @@ export default function CourseDetail() {
   const loadCourseDetail = async () => {
     setLoading(true)
     try {
-      const res = await api.get('/courses', {
-        params: { id: courseId }
-      })
+      const params: any = { 
+        id: courseId,
+        requested_by_role: user?.role || ''
+      }
+      
+      // Add student_email for students
+      if (user?.role.toLowerCase() === 'student' && user?.email) {
+        params.student_email = user.email
+      }
+      
+      const res = await api.get('/courses', { params })
       
       if (res.data?.success) {
         setCourse(res.data.data.course)
@@ -143,9 +146,9 @@ export default function CourseDetail() {
       } else {
         alert(res.data?.message || 'Failed to load course details')
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err)
-      alert('Failed to load course details')
+      alert(err?.response?.data?.message || 'Failed to load course details')
     } finally {
       setLoading(false)
     }
@@ -363,7 +366,9 @@ export default function CourseDetail() {
                 {loading ? 'Loading...' : course?.name}
               </h1>
               <p className="text-muted-foreground">
-                View course details and manage enrolled students.
+                {user?.role.toLowerCase() === 'student' 
+                  ? 'View course details and attendance sessions.'
+                  : 'View course details and manage enrolled students.'}
               </p>
             </div>
             
@@ -567,7 +572,7 @@ export default function CourseDetail() {
               </Card>
             )}
 
-            {/* Enrolled Students */}
+            {/* Enrolled Students - Show to all roles, but hide actions for students */}
             <Card>
               <CardHeader>
                 <CardTitle>Enrolled Students</CardTitle>
@@ -599,7 +604,9 @@ export default function CourseDetail() {
                         <TableHead>Name</TableHead>
                         <TableHead>Email</TableHead>
                         <TableHead>Enrolled Date</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
+                        {['admin', 'instructor'].includes(user?.role.toLowerCase() || '') && (
+                          <TableHead className="text-right">Actions</TableHead>
+                        )}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -627,19 +634,21 @@ export default function CourseDetail() {
                               day: 'numeric',
                             })}
                           </TableCell>
-                          <TableCell className="text-right">
-                            {user.role.toLowerCase() === 'admin' && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleUnenroll(student.id, student.student_name)}
-                                className="text-destructive hover:text-destructive"
-                              >
-                                <UserMinus className="mr-2 h-4 w-4" />
-                                Unenroll
-                              </Button>
-                            )}
-                          </TableCell>
+                          {['admin', 'instructor'].includes(user?.role.toLowerCase() || '') && (
+                            <TableCell className="text-right">
+                              {user.role.toLowerCase() === 'admin' && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleUnenroll(student.id, student.student_name)}
+                                  className="text-destructive hover:text-destructive"
+                                >
+                                  <UserMinus className="mr-2 h-4 w-4" />
+                                  Unenroll
+                                </Button>
+                              )}
+                            </TableCell>
+                          )}
                         </TableRow>
                       ))}
                     </TableBody>

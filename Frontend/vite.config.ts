@@ -17,26 +17,8 @@ export default defineConfig({
         target: 'http://localhost/sams/Backend',
         changeOrigin: true,
         rewrite: (path) => {
-          // Don't rewrite paths with subdirectories or special routes
-          // These are handled by the backend router
-          if (path.includes('/attendance-') || 
-              path.includes('/enroll') || 
-              path.includes('/unenroll') || 
-              path.includes('/instructors') || 
-              path.includes('/students') ||
-              path.includes('/auth/') ||
-              path === '/api/users' ||
-              path.startsWith('/api/users?')) {
-            return path
-          }
-          // For simple endpoints without subdirectories, add .php for backward compatibility
-          // Example: /api/courses -> /api/courses.php
-          // But only if it doesn't already have .php and has no subdirectories
-          const parts = path.split('/').filter(p => p)
-          if (parts.length === 2 && !path.endsWith('.php')) {
-            // Simple endpoint like /api/courses (but not /api/users)
-            return path + '.php'
-          }
+          // Route all API requests through index.php
+          // Keep /api prefix - index.php will remove it and route accordingly
           return path
         }
       }
