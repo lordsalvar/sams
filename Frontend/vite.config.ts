@@ -14,11 +14,11 @@ export default defineConfig({
     port: 3000,
     proxy: {
       '/api': {
-        target: 'http://localhost/sams/Backend',
+        target: 'http://localhost/sams/Backend/gateway',
         changeOrigin: true,
         rewrite: (path) => {
-          // Route all API requests through index.php
-          // Keep /api prefix - index.php will remove it and route accordingly
+          // Route all API requests through gateway
+          // Gateway handles /api prefix routing
           return path
         }
       }

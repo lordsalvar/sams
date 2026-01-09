@@ -157,8 +157,8 @@ export default function CourseDetail() {
   const loadInstructors = async () => {
     if (!user) return
     try {
-      const res = await api.get('/courses', {
-        params: { list: 'instructors', requested_by_role: user.role },
+      const res = await api.get('/courses/instructors', {
+        params: { requested_by_role: user.role },
       })
       if (res.data?.success) {
         setInstructors(res.data.data ?? [])
@@ -172,8 +172,8 @@ export default function CourseDetail() {
     if (!user) return
     setLoadingStudents(true)
     try {
-      const res = await api.get('/courses', {
-        params: { list: 'students', requested_by_role: user.role },
+      const res = await api.get('/courses/students', {
+        params: { requested_by_role: user.role },
       })
       if (res.data?.success) {
         const allStudents = res.data.data ?? []
