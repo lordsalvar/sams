@@ -1,0 +1,15 @@
+# API Gateway - Prevent direct access to microservices
+# All requests must go through the gateway
+
+RewriteEngine On
+RewriteBase /sams/Backend/gateway/
+
+# Block direct access to microservices directory
+RewriteCond %{REQUEST_URI} ^/sams/Backend/microservices/ [NC]
+RewriteRule ^(.*)$ - [F,L]
+
+# Route all requests to index.php
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.php [QSA,L]
+

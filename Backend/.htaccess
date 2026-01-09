@@ -1,0 +1,14 @@
+RewriteEngine On
+
+# Route all /api requests through index.php (even if .php file exists)
+RewriteCond %{REQUEST_URI} ^/sams/Backend/api/
+RewriteRule ^api/(.*)$ index.php [QSA,L]
+
+# Allow direct access to PHP files in the root (diagnostic/test files)
+RewriteCond %{REQUEST_URI} ^/sams/Backend/[^/]+\.php$
+RewriteRule ^ - [L]
+
+# Only rewrite if the file/directory doesn't exist
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.php [QSA,L]

@@ -1,0 +1,607 @@
+{
+	"info": {
+		"_postman_id": "sams-api-collection",
+		"name": "SAMS API Collection",
+		"description": "Complete API collection for Student Attendance Management System",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Login",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/login",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "login"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Test",
+			"item": [
+				{
+					"name": "Test API Connection",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/test",
+							"host": ["{{base_url}}"],
+							"path": ["api", "test"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Users",
+			"item": [
+				{
+					"name": "Get All Users",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/users?requested_by_role=admin",
+							"host": ["{{base_url}}"],
+							"path": ["api", "users"],
+							"query": [
+								{
+									"key": "requested_by_role",
+									"value": "admin"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"requested_by_role\": \"admin\",\n  \"name\": \"Instructor One\",\n  \"email\": \"instructor1@sams.com\",\n  \"password\": \"password123\",\n  \"role\": \"instructor\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/users",
+							"host": ["{{base_url}}"],
+							"path": ["api", "users"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update User",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"requested_by_role\": \"admin\",\n  \"id\": 2,\n  \"name\": \"Updated Instructor Name\",\n  \"email\": \"instructor1@sams.com\",\n  \"role\": \"instructor\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/users",
+							"host": ["{{base_url}}"],
+							"path": ["api", "users"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete User",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/users?id=2&requested_by_role=admin",
+							"host": ["{{base_url}}"],
+							"path": ["api", "users"],
+							"query": [
+								{
+									"key": "id",
+									"value": "2"
+								},
+								{
+									"key": "requested_by_role",
+									"value": "admin"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Courses",
+			"item": [
+				{
+					"name": "Get All Courses (Admin)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/courses?requested_by_role=admin",
+							"host": ["{{base_url}}"],
+							"path": ["api", "courses"],
+							"query": [
+								{
+									"key": "requested_by_role",
+									"value": "admin"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Courses (Instructor)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost/sams/Backend/api/courses?requested_by_role=instructor&instructor_email={{instructor_email}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "courses"],
+							"query": [
+								{
+									"key": "requested_by_role",
+									"value": "instructor"
+								},
+								{
+									"key": "instructor_email",
+									"value": "{{instructor_email}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Course by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost/sams/Backend/api/courses?id={{course_id}}&requested_by_role=admin",
+							"host": ["{{base_url}}"],
+							"path": ["api", "courses"],
+							"query": [
+								{
+									"key": "id",
+									"value": "{{course_id}}"
+								},
+								{
+									"key": "requested_by_role",
+									"value": "admin"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Instructors List",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/courses/instructors?requested_by_role=admin",
+							"host": ["{{base_url}}"],
+							"path": ["api", "courses", "instructors"],
+							"query": [
+								{
+									"key": "requested_by_role",
+									"value": "admin"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Students List",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/courses/students?requested_by_role=admin",
+							"host": ["{{base_url}}"],
+							"path": ["api", "courses", "students"],
+							"query": [
+								{
+									"key": "requested_by_role",
+									"value": "admin"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Course",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"requested_by_role\": \"admin\",\n  \"name\": \"Introduction to Programming\",\n  \"code\": \"CS101\",\n  \"instructor_email\": \"{{instructor_email}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/courses",
+							"host": ["{{base_url}}"],
+							"path": ["api", "courses"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Course",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"requested_by_role\": \"admin\",\n  \"id\": {{course_id}},\n  \"name\": \"Advanced Programming\",\n  \"code\": \"CS201\",\n  \"instructor_email\": \"{{instructor_email}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/courses",
+							"host": ["{{base_url}}"],
+							"path": ["api", "courses"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Course",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/courses?id={{course_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "courses"],
+							"query": [
+								{
+									"key": "id",
+									"value": "{{course_id}}"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Enrollments",
+			"item": [
+				{
+					"name": "Enroll Student",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"requested_by_role\": \"admin\",\n  \"course_id\": {{course_id}},\n  \"student_email\": \"{{student_email}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/courses/enroll",
+							"host": ["{{base_url}}"],
+							"path": ["api", "courses", "enroll"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Unenroll Student",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/courses/unenroll?enrollment_id=1&requested_by_role=admin",
+							"host": ["{{base_url}}"],
+							"path": ["api", "courses", "unenroll"],
+							"query": [
+								{
+									"key": "enrollment_id",
+									"value": "1"
+								},
+								{
+									"key": "requested_by_role",
+									"value": "admin"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Attendance Sessions",
+			"item": [
+				{
+					"name": "Get All Sessions",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/courses/attendance-sessions?requested_by_role=admin",
+							"host": ["{{base_url}}"],
+							"path": ["api", "courses", "attendance-sessions"],
+							"query": [
+								{
+									"key": "requested_by_role",
+									"value": "admin"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Sessions by Course",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/courses/attendance-sessions?requested_by_role=admin&course_id={{course_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "courses", "attendance-sessions"],
+							"query": [
+								{
+									"key": "requested_by_role",
+									"value": "admin"
+								},
+								{
+									"key": "course_id",
+									"value": "{{course_id}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Latest Session",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/courses/attendance-session?course_id={{course_id}}&requested_by_role=instructor",
+							"host": ["{{base_url}}"],
+							"path": ["api", "courses", "attendance-session"],
+							"query": [
+								{
+									"key": "course_id",
+									"value": "{{course_id}}"
+								},
+								{
+									"key": "requested_by_role",
+									"value": "instructor"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Attendance Session",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"requested_by_role\": \"instructor\",\n  \"requested_by_email\": \"{{instructor_email}}\",\n  \"course_id\": {{course_id}}\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/courses/attendance-session",
+							"host": ["{{base_url}}"],
+							"path": ["api", "courses", "attendance-session"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Attendance Scanning",
+			"item": [
+				{
+					"name": "Scan QR Code",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"requested_by_role\": \"student\",\n  \"token\": \"{{session_token}}\",\n  \"student_email\": \"{{student_email}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/courses/attendance-scan",
+							"host": ["{{base_url}}"],
+							"path": ["api", "courses", "attendance-scan"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Attendance Logs",
+			"item": [
+				{
+					"name": "Get Attendance Logs by Token",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/courses/attendance-logs?token={{session_token}}&requested_by_role=admin",
+							"host": ["{{base_url}}"],
+							"path": ["api", "courses", "attendance-logs"],
+							"query": [
+								{
+									"key": "token",
+									"value": "{{session_token}}"
+								},
+								{
+									"key": "requested_by_role",
+									"value": "admin"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Attendance Logs with Roster",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/courses/attendance-logs?session_id=1&requested_by_role=admin&include_students=1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "courses", "attendance-logs"],
+							"query": [
+								{
+									"key": "session_id",
+									"value": "1"
+								},
+								{
+									"key": "requested_by_role",
+									"value": "admin"
+								},
+								{
+									"key": "include_students",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Analytics",
+			"item": [
+				{
+					"name": "Get Course Analytics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/courses/attendance-analytics?course_id={{course_id}}&requested_by_role=admin",
+							"host": ["{{base_url}}"],
+							"path": ["api", "courses", "attendance-analytics"],
+							"query": [
+								{
+									"key": "course_id",
+									"value": "{{course_id}}"
+								},
+								{
+									"key": "requested_by_role",
+									"value": "admin"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost/sams/Backend",
+			"type": "string"
+		},
+		{
+			"key": "admin_email",
+			"value": "admin@sams.com",
+			"type": "string"
+		},
+		{
+			"key": "admin_password",
+			"value": "your_password",
+			"type": "string"
+		},
+		{
+			"key": "instructor_email",
+			"value": "instructor1@sams.com",
+			"type": "string"
+		},
+		{
+			"key": "student_email",
+			"value": "student1@sams.com",
+			"type": "string"
+		},
+		{
+			"key": "course_id",
+			"value": "1",
+			"type": "string"
+		},
+		{
+			"key": "session_token",
+			"value": "",
+			"type": "string"
+		}
+	]
+}
+
