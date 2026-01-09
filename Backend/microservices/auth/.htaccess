@@ -1,0 +1,4 @@
+# Prevent direct access - must go through API Gateway
+Order Deny,Allow
+Deny from all
+

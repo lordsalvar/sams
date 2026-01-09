@@ -1,30 +1,23 @@
-# PHP REST API Backend
+# SAMS Backend
 
-This is a native PHP REST API backend for the SAMS project.
+**Student Attendance Monitoring System** - Microservices REST API
 
-## Structure
+## Documentation
 
-- `index.php` - Main router that handles all API requests
-- `api/` - Directory containing all API endpoints
-- `.htaccess` - Apache rewrite rules for clean URLs
+- **[SETUP.md](SETUP.md)** - Complete setup and installation guide
+- **[CODEBASE.md](CODEBASE.md)** - Codebase architecture, APIs, and documentation
 
-## Setup
+## Quick Start
 
-1. Make sure Apache mod_rewrite is enabled
-2. Place this folder in your XAMPP htdocs directory
-3. Access API endpoints via: `http://localhost/sams/Backend/api/{endpoint}`
+1. See [SETUP.md](SETUP.md) for installation instructions
+2. See [CODEBASE.md](CODEBASE.md) for API documentation and architecture
 
-## Example Endpoints
+## Base URL
 
-- `GET /api/test.php` - Test endpoint to verify API is working
+```
+http://localhost/sams/Backend/gateway/api
+```
 
-## Adding New Endpoints
+---
 
-1. Create a new PHP file in the `api/` directory
-2. Add the route to `index.php` in the `$routes` array
-3. Handle CORS headers in your endpoint file
-
-## CORS
-
-CORS is configured to allow requests from any origin. For production, restrict this to your React app's domain.
-
+**Status:** ✅ Production Ready

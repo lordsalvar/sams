@@ -1,85 +1,114 @@
-# Frontend-Backend Compatibility Verification
+# Frontend Compatibility Guide
 
-## ✅ All Frontend Endpoints Are Still Working
+## ✅ Frontend Updated
 
-After the backend refactoring, **all frontend API calls continue to work** because:
-
-1. **Same API Endpoints**: All endpoint URLs remain exactly the same
-2. **Router Handles Everything**: The `index.php` router maps all routes correctly
-3. **Vite Proxy Updated**: Fixed to not break subdirectory routes
-
-## Frontend API Calls → Backend Routes
-
-| Frontend Call | Backend Route | Handler File | Status |
-|--------------|---------------|--------------|--------|
-| `GET /api/courses` | `/courses` | `api/courses.php` | ✅ Working |
-| `POST /api/courses` | `/courses` | `api/courses.php` | ✅ Working |
-| `PUT /api/courses` | `/courses` | `api/courses.php` | ✅ Working |
-| `DELETE /api/courses` | `/courses` | `api/courses.php` | ✅ Working |
-| `GET /api/courses/attendance-sessions` | `/courses/attendance-sessions` | `api/attendance/sessions.php` | ✅ Working |
-| `GET /api/courses/attendance-session` | `/courses/attendance-session` | `api/attendance/sessions.php` | ✅ Working |
-| `POST /api/courses/attendance-session` | `/courses/attendance-session` | `api/attendance/sessions.php` | ✅ Working |
-| `GET /api/courses/attendance-logs` | `/courses/attendance-logs` | `api/attendance/logs.php` | ✅ Working |
-| `GET /api/courses/attendance-analytics` | `/courses/attendance-analytics` | `api/attendance/analytics.php` | ✅ Working |
-| `POST /api/courses/attendance-scan` | `/courses/attendance-scan` | `api/attendance/scan.php` | ✅ Working |
-| `POST /api/courses/enroll` | `/courses/enroll` | `api/enrollments.php` | ✅ Working |
-| `DELETE /api/courses/unenroll` | `/courses/unenroll` | `api/enrollments.php` | ✅ Working |
-| `GET /api/users` | `/users` | `api/users.php` | ✅ Working |
-| `POST /api/users` | `/users` | `api/users.php` | ✅ Working |
-| `PUT /api/users` | `/users` | `api/users.php` | ✅ Working |
-| `DELETE /api/users` | `/users` | `api/users.php` | ✅ Working |
-| `POST /api/auth/login.php` | `/auth/login` | `api/auth/login.php` | ✅ Working |
-
-## How It Works
-
-### 1. Frontend Makes Request
-```typescript
-// Frontend code
-const res = await api.get('/courses/attendance-sessions', {
-  params: { requested_by_role: user.role }
-})
-```
-
-### 2. Vite Proxy Forwards Request
-- Request: `/api/courses/attendance-sessions`
-- Vite proxy detects subdirectory route and **doesn't rewrite** it
-- Forwards to: `http://localhost/sams/Backend/api/courses/attendance-sessions`
-
-### 3. Backend Router Processes
-- `index.php` receives: `/api/courses/attendance-sessions`
-- Removes `/api` prefix: `/courses/attendance-sessions`
-- Matches route in `$routes['GET']` array
-- Routes to: `api/attendance/sessions.php`
-
-### 4. Handler Executes
-- `api/attendance/sessions.php` processes the request
-- Returns JSON response
-- Frontend receives the data
+The frontend has been updated to work with the new API Gateway architecture.
 
 ## Changes Made
 
-### Vite Proxy Fix
-Updated `Frontend/vite.config.ts` to:
-- **Not rewrite** paths with subdirectories (like `/attendance-*`, `/enroll`, etc.)
-- Only add `.php` extension for simple endpoints (like `/api/courses` → `/api/courses.php`)
+### 1. Vite Proxy Configuration
 
-### Backend Router
-The `Backend/index.php` router:
-- Has explicit routes for all endpoints
-- Has fallback mechanism for direct file access
-- Handles all HTTP methods (GET, POST, PUT, DELETE)
+**File:** `Frontend/vite.config.ts`
+
+**Changed:**
+```typescript
+// Old
+target: 'http://localhost/sams/Backend'
+
+// New
+target: 'http://localhost/sams/Backend/gateway'
+```
+
+### 2. Login API URL
+
+**File:** `Frontend/src/pages/Login.tsx`
+
+**Changed:**
+```typescript
+// Old
+const API_BASE_URL = 'http://localhost/sams/Backend/api'
+`${API_BASE_URL}/auth/login.php`
+
+// New
+const API_BASE_URL = 'http://localhost/sams/Backend/gateway/api'
+`${API_BASE_URL}/auth/login`
+```
+
+## API Endpoint Changes
+
+### Removed `.php` Extension
+
+All endpoints no longer use `.php` extension:
+
+- ❌ Old: `/api/auth/login.php`
+- ✅ New: `/api/auth/login`
+
+- ❌ Old: `/api/users.php`
+- ✅ New: `/api/users`
+
+### Gateway Path
+
+All requests now go through Gateway:
+
+- ❌ Old: `http://localhost/sams/Backend/api/{endpoint}`
+- ✅ New: `http://localhost/sams/Backend/gateway/api/{endpoint}`
+
+## Frontend API Usage
+
+### Using Proxy (Recommended)
+
+Most pages use the proxy via `baseURL: '/api'`:
+
+```typescript
+const api = axios.create({ baseURL: '/api' })
+// Automatically proxies to: http://localhost/sams/Backend/gateway/api
+```
+
+**Files using this:**
+- `Users.tsx`
+- `Courses.tsx`
+- `CourseDetail.tsx`
+- `AttendanceSessions.tsx`
+- `AttendanceDisplay.tsx`
+- `AttendanceScan.tsx`
+- `AttendanceAnalytics.tsx`
+- `AllSessions.tsx`
+
+### Direct URL (Login only)
+
+Login page uses direct URL:
+
+```typescript
+const API_BASE_URL = 'http://localhost/sams/Backend/gateway/api'
+```
 
 ## Testing
 
-To verify everything works:
+### 1. Start Frontend
 
-1. **Start the frontend**: `npm run dev` (runs on port 3000)
-2. **Start the backend**: Ensure XAMPP/Apache is running
-3. **Test endpoints**: All API calls should work exactly as before
+```bash
+cd Frontend
+npm run dev
+```
 
-## No Frontend Changes Required
+### 2. Test Login
 
-✅ **Zero frontend code changes needed** - all API endpoints remain the same!
+- URL: http://localhost:3000/login
+- Credentials: `admin@local.dev` / `password`
 
-The refactoring was **100% internal** - only the backend file structure changed, not the API interface.
+### 3. Verify API Calls
+
+Check browser DevTools Network tab:
+- All requests should go to `/api/*`
+- Proxy should route to `http://localhost/sams/Backend/gateway/api/*`
+
+## Compatibility Status
+
+✅ **Frontend is compatible with new Gateway architecture**
+
+All API endpoints work the same way, just routed through Gateway.
+
+---
+
+**Status:** ✅ Updated and Compatible
 

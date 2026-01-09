@@ -1,0 +1,6 @@
+# Prevent direct access to microservices
+# All requests must go through the API Gateway
+# Services are PHP classes, not web-accessible endpoints
+
+Order Deny,Allow
+Deny from all

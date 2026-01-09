@@ -161,9 +161,8 @@ export default function Courses() {
 
   const loadInstructors = async (role: string) => {
     try {
-      // use query param fallback so it works even when pretty route is not available
-      const res = await api.get('/courses', {
-        params: { list: 'instructors', requested_by_role: role },
+      const res = await api.get('/courses/instructors', {
+        params: { requested_by_role: role },
       })
       if (res.data?.success) {
         setInstructors(res.data.data ?? [])
@@ -184,8 +183,8 @@ export default function Courses() {
     setLoadingStudents(true)
     try {
       // Load all students
-      const res = await api.get('/courses', {
-        params: { list: 'students', requested_by_role: user.role },
+      const res = await api.get('/courses/students', {
+        params: { requested_by_role: user.role },
       })
       if (res.data?.success) {
         const allStudents = res.data.data ?? []
