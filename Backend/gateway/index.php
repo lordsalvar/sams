@@ -22,6 +22,7 @@ require_once dirname(__DIR__) . '/microservices/CourseService.php';
 require_once dirname(__DIR__) . '/microservices/AttendanceService.php';
 require_once dirname(__DIR__) . '/microservices/EnrollmentService.php';
 require_once dirname(__DIR__) . '/microservices/TestService.php';
+require_once dirname(__DIR__) . '/microservices/analytics/DataWarehouseService.php';
 
 // Enable CORS
 setCorsHeaders();
@@ -197,6 +198,35 @@ try {
         $service = new EnrollmentService();
         $enrollmentId = isset($query['enrollment_id']) ? (int)$query['enrollment_id'] : null;
         $response = $service->unenrollStudent($enrollmentId);
+    }
+    // Data Warehouse / Analytics
+    elseif (strpos($uri, '/analytics/refresh') !== false && $requestMethod === 'POST') {
+        requireRole(['admin', 'instructor'], $body);
+        $response = DataWarehouseService::refreshDataWarehouse();
+    }
+    elseif (strpos($uri, '/analytics/features') !== false && $requestMethod === 'GET') {
+        requireRole(['admin', 'instructor'], $body);
+        $studentId = isset($query['student_id']) ? (int)$query['student_id'] : null;
+        $courseId = isset($query['course_id']) ? (int)$query['course_id'] : null;
+        $response = DataWarehouseService::getStudentAttendanceFeatures($studentId, $courseId);
+    }
+    elseif (strpos($uri, '/analytics/by-day') !== false && $requestMethod === 'GET') {
+        requireRole(['admin', 'instructor'], $body);
+        $courseCode = isset($query['course_code']) ? trim((string)$query['course_code']) : null;
+        $response = DataWarehouseService::getAttendanceByDay($courseCode);
+    }
+    elseif (strpos($uri, '/analytics/summary') !== false && $requestMethod === 'GET') {
+        requireRole(['admin', 'instructor'], $body);
+        $courseId = isset($query['course_id']) ? (int)$query['course_id'] : null;
+        $startDate = isset($query['start_date']) ? trim((string)$query['start_date']) : null;
+        $endDate = isset($query['end_date']) ? trim((string)$query['end_date']) : null;
+        $response = DataWarehouseService::getAttendanceSummary($courseId, $startDate, $endDate);
+    }
+    elseif (strpos($uri, '/analytics/mining') !== false && $requestMethod === 'GET') {
+        requireRole(['admin', 'instructor'], $body);
+        $studentId = isset($query['student_id']) ? (int)$query['student_id'] : null;
+        $courseId = isset($query['course_id']) ? (int)$query['course_id'] : null;
+        $response = DataWarehouseService::getDataMiningDataset($studentId, $courseId);
     }
     // Route not found
     else {

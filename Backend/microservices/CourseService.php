@@ -11,7 +11,6 @@ class CourseService {
         $requestedByRole = isset($query['requested_by_role']) ? strtolower(trim((string)$query['requested_by_role'])) : '';
         $instructorEmail = isset($query['instructor_email']) ? trim((string)$query['instructor_email']) : '';
         $studentEmail = isset($query['student_email']) ? trim((string)$query['student_email']) : '';
-        
         // If student, only show courses they are enrolled in
         if ($requestedByRole === 'student' && !empty($studentEmail)) {
             $stmt = $conn->prepare("SELECT id FROM users WHERE email = ? AND role = 'student'");

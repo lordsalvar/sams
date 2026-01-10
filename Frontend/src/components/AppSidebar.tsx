@@ -7,6 +7,7 @@ import {
   LogOut,
   UserCircle,
   CalendarClock,
+  Database,
 } from 'lucide-react'
 import {
   Sidebar,
@@ -57,6 +58,12 @@ const navItems: NavItem[] = [
     href: '/dashboard/sessions',
     icon: CalendarClock,
     roles: ['admin', 'instructor', 'student'],
+  },
+  {
+    title: 'Data Warehouse',
+    href: '/dashboard/data-warehouse',
+    icon: Database,
+    roles: ['admin', 'instructor'],
   },
 ]
 
