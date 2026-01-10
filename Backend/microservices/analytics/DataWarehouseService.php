@@ -1,7 +1,7 @@
 <?php
 /**
- * Data Warehouse Service
- * Handles data warehouse operations for analytics and data mining
+ * Analytics Service
+ * Handles analytics operations and data mining
  */
 
 require_once __DIR__ . '/../config.php';
@@ -9,7 +9,7 @@ require_once __DIR__ . '/../config.php';
 class DataWarehouseService {
     
     /**
-     * Refresh the entire data warehouse
+     * Refresh the entire analytics database
      * Syncs all dimension and fact tables with source data
      */
     public static function refreshDataWarehouse() {
@@ -31,13 +31,13 @@ class DataWarehouseService {
             
             return [
                 'success' => true,
-                'message' => 'Data warehouse refreshed successfully'
+                'message' => 'Analytics data refreshed successfully'
             ];
         } catch (Exception $e) {
             $conn->close();
             return [
                 'success' => false,
-                'message' => 'Failed to refresh data warehouse: ' . $e->getMessage()
+                'message' => 'Failed to refresh analytics data: ' . $e->getMessage()
             ];
         }
     }

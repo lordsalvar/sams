@@ -199,7 +199,7 @@ try {
         $enrollmentId = isset($query['enrollment_id']) ? (int)$query['enrollment_id'] : null;
         $response = $service->unenrollStudent($enrollmentId);
     }
-    // Data Warehouse / Analytics
+    // Analytics
     elseif (strpos($uri, '/analytics/refresh') !== false && $requestMethod === 'POST') {
         requireRole(['admin', 'instructor'], $body);
         $response = DataWarehouseService::refreshDataWarehouse();

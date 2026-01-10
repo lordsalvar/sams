@@ -1,5 +1,5 @@
 -- ============================================
--- SAMS Data Warehouse Setup Script
+-- SAMS Analytics Setup Script
 -- Dimension and Fact Tables for Analytics & Data Mining
 -- ============================================
 -- Run this script after the main database_setup.sql
@@ -197,11 +197,13 @@ CREATE TABLE IF NOT EXISTS fact_attendance (
 -- Populates dates from 2020 to 2030 (adjust range as needed)
 DELIMITER //
 
-CREATE PROCEDURE IF NOT EXISTS PopulateDimDate()
+DROP PROCEDURE IF EXISTS PopulateDimDate //
+
+CREATE PROCEDURE PopulateDimDate()
 BEGIN
     DECLARE start_date DATE DEFAULT '2020-01-01';
     DECLARE end_date DATE DEFAULT '2030-12-31';
-    DECLARE current_date DATE;
+    DECLARE cur_date DATE;
     DECLARE date_key_val INT;
     DECLARE day_of_week_val INT;
     DECLARE day_name_val VARCHAR(10);
@@ -210,22 +212,22 @@ BEGIN
     DECLARE semester_val INT;
     DECLARE is_weekend_val BOOLEAN;
     
-    SET current_date = start_date;
+    SET cur_date = start_date;
     
-    WHILE current_date <= end_date DO
-        SET date_key_val = YEAR(current_date) * 10000 + MONTH(current_date) * 100 + DAY(current_date);
-        SET day_of_week_val = DAYOFWEEK(current_date);
+    WHILE cur_date <= end_date DO
+        SET date_key_val = YEAR(cur_date) * 10000 + MONTH(cur_date) * 100 + DAY(cur_date);
+        SET day_of_week_val = DAYOFWEEK(cur_date);
         -- Convert MySQL DAYOFWEEK (1=Sunday) to our format (1=Monday)
         SET day_of_week_val = CASE 
             WHEN day_of_week_val = 1 THEN 7
             ELSE day_of_week_val - 1
         END;
-        SET day_name_val = DAYNAME(current_date);
-        SET month_name_val = MONTHNAME(current_date);
-        SET quarter_val = QUARTER(current_date);
+        SET day_name_val = DAYNAME(cur_date);
+        SET month_name_val = MONTHNAME(cur_date);
+        SET quarter_val = QUARTER(cur_date);
         SET semester_val = CASE 
-            WHEN MONTH(current_date) BETWEEN 1 AND 6 THEN 1
-            WHEN MONTH(current_date) BETWEEN 7 AND 12 THEN 2
+            WHEN MONTH(cur_date) BETWEEN 1 AND 6 THEN 1
+            WHEN MONTH(cur_date) BETWEEN 7 AND 12 THEN 2
         END;
         SET is_weekend_val = (day_of_week_val IN (6, 7));
         
@@ -235,24 +237,24 @@ BEGIN
             is_weekend, is_holiday, holiday_name
         ) VALUES (
             date_key_val,
-            current_date,
+            cur_date,
             day_of_week_val,
             day_name_val,
-            DAY(current_date),
-            DAYOFYEAR(current_date),
-            WEEK(current_date, 3), -- ISO week
-            MONTH(current_date),
+            DAY(cur_date),
+            DAYOFYEAR(cur_date),
+            WEEK(cur_date, 3), -- ISO week
+            MONTH(cur_date),
             month_name_val,
             quarter_val,
             semester_val,
-            YEAR(current_date),
+            YEAR(cur_date),
             is_weekend_val,
             FALSE,
             NULL
         )
         ON DUPLICATE KEY UPDATE date_value = date_value;
         
-        SET current_date = DATE_ADD(current_date, INTERVAL 1 DAY);
+        SET cur_date = DATE_ADD(cur_date, INTERVAL 1 DAY);
     END WHILE;
 END //
 
@@ -261,7 +263,9 @@ DELIMITER ;
 -- Procedure to populate Dim_student from users table
 DELIMITER //
 
-CREATE PROCEDURE IF NOT EXISTS PopulateDimStudent()
+DROP PROCEDURE IF EXISTS PopulateDimStudent //
+
+CREATE PROCEDURE PopulateDimStudent()
 BEGIN
     INSERT INTO Dim_student (student_id, student_name, student_email)
     SELECT id, name, email
@@ -278,7 +282,9 @@ DELIMITER ;
 -- Procedure to populate Dim_Instructor from users table
 DELIMITER //
 
-CREATE PROCEDURE IF NOT EXISTS PopulateDimInstructor()
+DROP PROCEDURE IF EXISTS PopulateDimInstructor //
+
+CREATE PROCEDURE PopulateDimInstructor()
 BEGIN
     INSERT INTO Dim_Instructor (instructor_id, instructor_name, instructor_email)
     SELECT id, name, email
@@ -295,7 +301,9 @@ DELIMITER ;
 -- Procedure to populate Dim_Course from courses table
 DELIMITER //
 
-CREATE PROCEDURE IF NOT EXISTS PopulateDimCourse()
+DROP PROCEDURE IF EXISTS PopulateDimCourse //
+
+CREATE PROCEDURE PopulateDimCourse()
 BEGIN
     INSERT INTO Dim_Course (course_id, course_name, course_code, instructor_email, instructor_key)
     SELECT 
@@ -319,7 +327,9 @@ DELIMITER ;
 -- Procedure to populate Dim_Session from attendance_sessions table
 DELIMITER //
 
-CREATE PROCEDURE IF NOT EXISTS PopulateDimSession()
+DROP PROCEDURE IF EXISTS PopulateDimSession //
+
+CREATE PROCEDURE PopulateDimSession()
 BEGIN
     INSERT INTO Dim_Session (session_id, token, course_id, course_key, expires_at, created_by_email, created_at)
     SELECT 
@@ -346,7 +356,9 @@ DELIMITER ;
 -- Procedure to populate fact_enrollment from enrollments table
 DELIMITER //
 
-CREATE PROCEDURE IF NOT EXISTS PopulateFactEnrollment()
+DROP PROCEDURE IF EXISTS PopulateFactEnrollment //
+
+CREATE PROCEDURE PopulateFactEnrollment()
 BEGIN
     INSERT INTO fact_enrollment (student_key, course_key, enrollment_date_key, enrollment_timestamp)
     SELECT 
@@ -369,7 +381,9 @@ DELIMITER ;
 -- Determines attendance status (Present/Late) based on session creation time
 DELIMITER //
 
-CREATE PROCEDURE IF NOT EXISTS PopulateFactAttendance()
+DROP PROCEDURE IF EXISTS PopulateFactAttendance //
+
+CREATE PROCEDURE PopulateFactAttendance()
 BEGIN
     INSERT INTO fact_attendance (
         session_key, student_key, course_key, date_key, 
@@ -406,7 +420,9 @@ DELIMITER ;
 -- This creates "Absent" records for data mining purposes
 DELIMITER //
 
-CREATE PROCEDURE IF NOT EXISTS PopulateAbsentRecords()
+DROP PROCEDURE IF EXISTS PopulateAbsentRecords //
+
+CREATE PROCEDURE PopulateAbsentRecords()
 BEGIN
     -- Insert absent records for enrolled students who didn't scan
     INSERT INTO fact_attendance (
@@ -440,7 +456,9 @@ DELIMITER ;
 -- Master procedure to refresh all dimension and fact tables
 DELIMITER //
 
-CREATE PROCEDURE IF NOT EXISTS RefreshDataWarehouse()
+DROP PROCEDURE IF EXISTS RefreshDataWarehouse //
+
+CREATE PROCEDURE RefreshDataWarehouse()
 BEGIN
     -- Populate dimensions first
     CALL PopulateDimDate();
@@ -454,7 +472,7 @@ BEGIN
     CALL PopulateFactAttendance();
     CALL PopulateAbsentRecords();
     
-    SELECT 'Data warehouse refreshed successfully' as message;
+    SELECT 'Analytics data refreshed successfully' as message;
 END //
 
 DELIMITER ;

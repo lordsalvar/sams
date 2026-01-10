@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
-import { Loader2, Database, RefreshCw, BarChart3, TrendingUp, Users, Calendar, Download, FileSpreadsheet } from 'lucide-react'
+import { Loader2, Database, RefreshCw, BarChart3, TrendingUp, Users, Calendar } from 'lucide-react'
 
 const api = axios.create({ baseURL: '/api' })
 
@@ -52,18 +52,17 @@ interface AttendanceSummary {
   attendance_rate: number
 }
 
-export default function DataWarehouse() {
+export default function Analytics() {
   const navigate = useNavigate()
   const [user, setUser] = useState<{ role: string; name: string; email?: string } | null>(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
-  const [activeTab, setActiveTab] = useState<'features' | 'byDay' | 'summary' | 'mining'>('features')
+  const [activeTab, setActiveTab] = useState<'features' | 'byDay' | 'summary'>('features')
   
   // Data states
   const [features, setFeatures] = useState<AttendanceFeature[]>([])
   const [attendanceByDay, setAttendanceByDay] = useState<AttendanceByDay[]>([])
   const [summary, setSummary] = useState<AttendanceSummary[]>([])
-  const [miningData, setMiningData] = useState<any[]>([])
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user')
@@ -89,8 +88,7 @@ export default function DataWarehouse() {
       await Promise.all([
         loadFeatures(),
         loadAttendanceByDay(),
-        loadSummary(),
-        loadMiningData()
+        loadSummary()
       ])
     } catch (err) {
       console.error('Failed to load data', err)
@@ -138,19 +136,6 @@ export default function DataWarehouse() {
     }
   }
 
-  const loadMiningData = async () => {
-    try {
-      const res = await api.get('/analytics/mining', {
-        params: { requested_by_role: user?.role }
-      })
-      if (res.data?.success) {
-        setMiningData(res.data.data || [])
-      }
-    } catch (err) {
-      console.error('Failed to load mining data', err)
-    }
-  }
-
   const handleRefresh = async () => {
     setRefreshing(true)
     try {
@@ -159,40 +144,16 @@ export default function DataWarehouse() {
       })
       if (res.data?.success) {
         await loadData()
-        alert('Data warehouse refreshed successfully!')
+        alert('Analytics data refreshed successfully!')
       } else {
-        alert(res.data?.message || 'Failed to refresh data warehouse')
+        alert(res.data?.message || 'Failed to refresh analytics data')
       }
     } catch (err: any) {
       console.error('Failed to refresh', err)
-      alert(err?.response?.data?.message || 'Failed to refresh data warehouse')
+      alert(err?.response?.data?.message || 'Failed to refresh analytics data')
     } finally {
       setRefreshing(false)
     }
-  }
-
-  const exportToCSV = (data: any[], filename: string) => {
-    if (data.length === 0) {
-      alert('No data to export')
-      return
-    }
-
-    const headers = Object.keys(data[0])
-    const csv = [
-      headers.join(','),
-      ...data.map(row => headers.map(header => {
-        const value = row[header]
-        return typeof value === 'string' && value.includes(',') ? `"${value}"` : value
-      }).join(','))
-    ].join('\n')
-
-    const blob = new Blob([csv], { type: 'text/csv' })
-    const url = window.URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = filename
-    a.click()
-    window.URL.revokeObjectURL(url)
   }
 
   if (!user) {
@@ -212,14 +173,14 @@ export default function DataWarehouse() {
         localStorage.removeItem('token')
         navigate('/login')
       }}
-      title="Data Warehouse & Analytics"
+      title="Analytics"
     >
       <div className="flex flex-col gap-4">
         {/* Header Actions */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Database className="h-5 w-5" />
-            <h2 className="text-xl font-semibold">Data Warehouse Analytics</h2>
+            <h2 className="text-xl font-semibold">Analytics</h2>
           </div>
           <div className="flex gap-2">
             <Button
@@ -234,15 +195,6 @@ export default function DataWarehouse() {
               )}
               Refresh Data
             </Button>
-            {activeTab === 'mining' && miningData.length > 0 && (
-              <Button
-                variant="outline"
-                onClick={() => exportToCSV(miningData, 'data_mining_dataset.csv')}
-              >
-                <Download className="mr-2 h-4 w-4" />
-                Export CSV
-              </Button>
-            )}
           </div>
         </div>
 
@@ -271,14 +223,6 @@ export default function DataWarehouse() {
           >
             <TrendingUp className="mr-2 h-4 w-4" />
             Summary
-          </Button>
-          <Button
-            variant={activeTab === 'mining' ? 'default' : 'ghost'}
-            onClick={() => setActiveTab('mining')}
-            className="rounded-b-none"
-          >
-            <FileSpreadsheet className="mr-2 h-4 w-4" />
-            Data Mining
           </Button>
         </div>
 
@@ -456,81 +400,9 @@ export default function DataWarehouse() {
               </div>
             )}
 
-            {/* Data Mining Tab */}
-            {activeTab === 'mining' && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Data Mining Dataset</CardTitle>
-                  <CardDescription>
-                    Complete dataset for machine learning: Target variable (attendance_status) and features (total_attendance_count, number_of_absences, class, day_of_week)
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {miningData.length === 0 ? (
-                    <div className="text-sm text-muted-foreground py-8 text-center">
-                      No data mining dataset available. Click "Refresh Data" to populate.
-                    </div>
-                  ) : (
-                    <>
-                      <div className="mb-4 p-3 bg-muted rounded-md">
-                        <div className="text-sm font-medium mb-2">Dataset Info:</div>
-                        <div className="text-xs text-muted-foreground space-y-1">
-                          <div><strong>Target Variable:</strong> attendance_status (Present/Absent/Late)</div>
-                          <div><strong>Features:</strong> total_attendance_count, number_of_absences, number_of_late, class, subject, day_of_week, minutes_late</div>
-                          <div><strong>Records:</strong> {miningData.length}</div>
-                        </div>
-                      </div>
-                      <div className="rounded-md border overflow-auto max-h-[600px]">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Student</TableHead>
-                              <TableHead>Class</TableHead>
-                              <TableHead>Day</TableHead>
-                              <TableHead>Total Present</TableHead>
-                              <TableHead>Absences</TableHead>
-                              <TableHead>Late Count</TableHead>
-                              <TableHead>Status</TableHead>
-                              <TableHead>Minutes Late</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {miningData.slice(0, 100).map((row, idx) => (
-                              <TableRow key={idx}>
-                                <TableCell>{row.student_name || row.student_id}</TableCell>
-                                <TableCell>{row.class || row.course_code}</TableCell>
-                                <TableCell>{row.day_name || row.day_of_week}</TableCell>
-                                <TableCell>{row.total_attendance_count || 0}</TableCell>
-                                <TableCell>{row.number_of_absences || 0}</TableCell>
-                                <TableCell>{row.number_of_late || 0}</TableCell>
-                                <TableCell>
-                                  <Badge variant={
-                                    row.target_variable === 'Present' ? 'default' :
-                                    row.target_variable === 'Late' ? 'secondary' : 'destructive'
-                                  }>
-                                    {row.target_variable}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell>{row.minutes_late || 0}</TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
-                      {miningData.length > 100 && (
-                        <div className="mt-2 text-sm text-muted-foreground text-center">
-                          Showing first 100 of {miningData.length} records. Export CSV to see all data.
-                        </div>
-                      )}
-                    </>
-                  )}
-                </CardContent>
-              </Card>
-            )}
           </>
         )}
       </div>
     </DashboardLayout>
   )
 }
-

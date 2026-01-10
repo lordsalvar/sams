@@ -60,8 +60,8 @@ const navItems: NavItem[] = [
     roles: ['admin', 'instructor', 'student'],
   },
   {
-    title: 'Data Warehouse',
-    href: '/dashboard/data-warehouse',
+    title: 'Analytics',
+    href: '/dashboard/analytics',
     icon: Database,
     roles: ['admin', 'instructor'],
   },

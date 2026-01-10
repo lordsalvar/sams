@@ -556,12 +556,6 @@ export default function CourseDetail() {
                           View Sessions/Logs
                         </Link>
                       </Button>
-                      <Button asChild variant="ghost" className="mt-1">
-                        <Link to={`/dashboard/courses/${course.id}/attendance-analytics`}>
-                          <CalendarClock className="mr-2 h-4 w-4" />
-                          Analytics
-                        </Link>
-                      </Button>
                     </div>
                   ) : (
                     <div className="text-sm text-muted-foreground">
