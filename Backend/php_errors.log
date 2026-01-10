@@ -79,3 +79,4 @@
 [17-Dec-2025 14:18:15 Asia/Manila] Attempting database connection...
 [17-Dec-2025 14:18:15 Asia/Manila] DB_HOST: localhost, DB_USER: root, DB_NAME: sams_db
 [17-Dec-2025 14:18:15 Asia/Manila] Database connected successfully
+[10-Jan-2026 04:52:06 Asia/Manila] PHP Warning:  mysqli::__construct(): Error while reading greeting packet. PID=12064 in C:\xampp\htdocs\sams\Backend\microservices\config.php on line 34

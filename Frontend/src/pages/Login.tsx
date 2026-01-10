@@ -6,7 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { Input } from '../components/ui/input'
 import { Label } from '../components/ui/label'
 
-const API_BASE_URL = 'http://localhost/sams/Backend/gateway/api'
+// Use proxy for consistency - all requests go through Gateway
+const api = axios.create({ baseURL: '/api' })
 
 interface LoginResponse {
   success: boolean
@@ -50,8 +51,8 @@ export default function Login() {
     }
 
     try {
-      const response = await axios.post<LoginResponse>(
-        `${API_BASE_URL}/auth/login`,
+      const response = await api.post<LoginResponse>(
+        '/auth/login',
         formData,
         {
           headers: {
